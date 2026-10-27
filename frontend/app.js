@@ -522,7 +522,7 @@ window.toggleTheme = function () {
 // --- Section Navigation Switcher ---
 window.switchSection = function (sectionName) {
   appState.activeSection = sectionName;
-  const sections = ["dashboard", "todo", "subjects", "weak", "backend"];
+  const sections = ["dashboard", "todo", "subjects", "weak"];
   sections.forEach((s) => {
     const el = document.getElementById("section-" + s);
     const navBtn = document.getElementById("nav-" + s);

@@ -397,14 +397,6 @@
                 >0</span
               >
             </button>
-            <button
-              onclick="switchSection('backend')"
-              id="nav-backend"
-              class="nav-tab px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition flex items-center gap-2 whitespace-nowrap text-slate-600 dark:text-slate-300 hover:text-neonCyan"
-            >
-              <i class="fa-solid fa-server text-neonCyan"></i>
-              <span>Vercel Guide</span>
-            </button>
           </nav>
 
           <!-- User Controls & Theme Toggle -->
@@ -1047,80 +1039,6 @@
         </section>
 
         <!-- ==================== 5. VERCEL & MONGODB DEPLOYMENT GUIDE ==================== -->
-        <section id="section-backend" class="hidden space-y-6">
-          <div
-            class="bg-white dark:bg-darkCard rounded-3xl border border-slate-200 dark:border-darkBorder p-6 sm:p-8 shadow-sm"
-          >
-            <div class="pb-6 border-b border-slate-200 dark:border-darkBorder">
-              <span
-                class="text-xs font-bold uppercase tracking-wider text-neonCyan"
-                >Full-Stack MERN Architecture • Vercel Deployment Guide</span
-              >
-              <h1 class="text-2xl font-bold mt-1">
-                Deploy Frontend & Backend on Vercel + Link MongoDB Atlas
-              </h1>
-              <p
-                class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1"
-              >
-                Follow these exact steps to run locally in VS Code and deploy
-                both folders (`backend/` and `frontend/`) to Vercel.
-              </p>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 my-6">
-              <div
-                class="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700"
-              >
-                <div class="text-neonPurple font-bold text-sm mb-2">
-                  <i class="fa-solid fa-laptop-code mr-1.5"></i> 1. Local VS
-                  Code Testing
-                </div>
-                <p
-                  class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed"
-                >
-                  Open terminal in <code>backend/</code> folder:<br />
-                  <code>npm install</code><br />
-                  <code>npm start</code><br />
-                  Put your MongoDB Atlas URI in <code>backend/.env</code>. Then
-                  open <code>frontend/index.html</code> with Live Server.
-                </p>
-              </div>
-              <div
-                class="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700"
-              >
-                <div class="text-neonCyan font-bold text-sm mb-2">
-                  <i class="fa-solid fa-cloud-arrow-up mr-1.5"></i> 2. Deploy
-                  Backend to Vercel
-                </div>
-                <p
-                  class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed"
-                >
-                  Push project to GitHub. In Vercel, import repo, set
-                  <strong>Root Directory</strong> to <code>backend</code>, and
-                  add Environment Variables: <code>MONGO_URI</code> and
-                  <code>JWT_SECRET</code>. Copy your live backend URL.
-                </p>
-              </div>
-              <div
-                class="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700"
-              >
-                <div class="text-emerald-500 font-bold text-sm mb-2">
-                  <i class="fa-solid fa-link mr-1.5"></i> 3. Link Frontend &
-                  Deploy
-                </div>
-                <p
-                  class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed"
-                >
-                  Open <code>frontend/app.js</code> (Line 6) and replace
-                  <code>http://localhost:5000/api</code> with your Vercel
-                  Backend URL (e.g.
-                  <code>https://recursy-api.vercel.app/api</code>). Deploy
-                  <code>frontend</code> folder to Vercel!
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
       </main>
 
       <!-- Footer -->
