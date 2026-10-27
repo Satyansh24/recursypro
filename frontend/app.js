@@ -1,11 +1,6 @@
 // ============================================================================
 // RECURSY PRO — FULL-STACK FRONTEND ENGINE (MONGODB ATLAS + JWT + VERCEL READY)
 // ============================================================================
-// STEP FOR VERCEL DEPLOYMENT:
-// Local testing ke liye: 'http://localhost:5000/api'
-// Jab Backend Vercel par deploy ho jaye, tab yahan apna Vercel Backend URL daalein:
-// Example: const API_URL = 'https://recursy-backend.vercel.app/api';
-// ============================================================================
 const API_URL = "https://recursy-api.vercel.app/api";
 
 let appState = {
@@ -238,16 +233,16 @@ function normalizeTrackerData(raw) {
   return { todos, subjects, weakAreas };
 }
 
-// --- Toast Notification Helper ---
+// --- Toast Notification Helper (Unified 3-Color Palette) ---
 function showToast(message, type = "success") {
   const container = document.getElementById("toastContainer");
   if (!container) return;
   const toast = document.createElement("div");
   const colors = {
-    success: "bg-emerald-600 text-white border-emerald-400",
-    info: "bg-indigo-600 text-white border-indigo-400",
-    warning: "bg-amber-500 text-slate-950 border-amber-300",
-    error: "bg-rose-600 text-white border-rose-400",
+    success: "bg-neonPurple text-black border-neonPurple",
+    info: "bg-neonCyan text-black border-neonCyan",
+    warning: "bg-electricYellow text-black border-electricYellow",
+    error: "bg-electricYellow text-black border-electricYellow",
   };
   const icons = {
     success: "fa-circle-check",
@@ -255,7 +250,7 @@ function showToast(message, type = "success") {
     warning: "fa-bolt",
     error: "fa-circle-exclamation",
   };
-  toast.className = `pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-2xl shadow-xl border text-xs sm:text-sm font-semibold transform transition-all duration-300 ${colors[type] || colors.success}`;
+  toast.className = `pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-2xl shadow-xl border text-xs sm:text-sm font-bold transform transition-all duration-300 ${colors[type] || colors.success}`;
   toast.innerHTML = `<i class="fa-solid ${icons[type] || icons.success} text-base"></i><span>${message}</span>`;
   container.appendChild(toast);
   setTimeout(() => {
@@ -264,7 +259,7 @@ function showToast(message, type = "success") {
   }, 2600);
 }
 
-// --- Custom Confirmation Modal Helper (Replaces ugly confirm() prompts) ---
+// --- Custom Confirmation Modal Helper ---
 function askConfirmation(title, message, onConfirm) {
   const modal = document.getElementById("confirmModal");
   document.getElementById("confirmTitle").textContent = title;
@@ -322,7 +317,7 @@ window.switchAuthTab = function (mode) {
 
   if (mode === "register") {
     regBtn.className =
-      "py-2 text-sm font-semibold rounded-lg bg-white dark:bg-darkCard text-neonPurple shadow-sm transition";
+      "py-2 text-sm font-bold rounded-lg bg-white dark:bg-darkCard text-neonPurple shadow-sm transition";
     loginBtn.className =
       "py-2 text-sm font-semibold rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition";
     nameWrap.classList.remove("hidden");
@@ -332,7 +327,7 @@ window.switchAuthTab = function (mode) {
     submitText.textContent = "Sign Up & Open Dashboard";
   } else {
     loginBtn.className =
-      "py-2 text-sm font-semibold rounded-lg bg-white dark:bg-darkCard text-neonPurple shadow-sm transition";
+      "py-2 text-sm font-bold rounded-lg bg-white dark:bg-darkCard text-neonPurple shadow-sm transition";
     regBtn.className =
       "py-2 text-sm font-semibold rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition";
     nameWrap.classList.add("hidden");
@@ -473,12 +468,12 @@ async function saveWorkspaceToCloud() {
       body: JSON.stringify(appState.data),
     });
     if (badge) {
-      badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Cloud Synced`;
+      badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-neonPurple animate-pulse"></span> Cloud Synced`;
     }
   } catch (err) {
     console.error("Error syncing to MongoDB:", err);
     if (badge) {
-      badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Saved Locally`;
+      badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-electricYellow"></span> Saved Locally`;
     }
   }
 }
@@ -529,7 +524,7 @@ window.switchSection = function (sectionName) {
     if (s === sectionName) {
       el.classList.remove("hidden");
       navBtn.className =
-        "nav-tab px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition flex items-center gap-2 whitespace-nowrap bg-neonPurple text-white shadow-sm";
+        "nav-tab px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 whitespace-nowrap bg-neonPurple text-black shadow-sm";
     } else {
       el.classList.add("hidden");
       navBtn.className =
@@ -700,10 +695,10 @@ window.setTodoFilter = function (filter) {
     const btn = document.getElementById("todoFilter-" + f);
     if (f === filter) {
       btn.className =
-        "px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500 text-white transition";
+        "px-3 py-1.5 rounded-lg text-xs font-bold bg-neonPurple text-black transition";
     } else {
       btn.className =
-        "px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 transition";
+        "px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-neutral-900 text-slate-600 dark:text-slate-300 transition";
     }
   });
   renderTodoSection();
@@ -1084,7 +1079,7 @@ function renderDashboardSection(metrics) {
       .map((subj) => {
         const st = calculateSubjectStats(subj);
         return `
-                <div onclick="selectSubject('${subj.id}')" class="cursor-pointer p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-700/70 transition">
+                <div onclick="selectSubject('${subj.id}')" class="cursor-pointer p-4 rounded-2xl bg-slate-50 dark:bg-neutral-900/90 hover:bg-slate-100 dark:hover:bg-neutral-800 border border-slate-200 dark:border-darkBorder hover:border-neonPurple/40 transition">
                     <div class="flex items-center justify-between mb-2">
                         <div class="flex items-center gap-2.5">
                             <div class="w-8 h-8 rounded-xl bg-neonPurple/15 text-neonPurple flex items-center justify-center font-bold text-sm">
@@ -1096,11 +1091,11 @@ function renderDashboardSection(metrics) {
                             </div>
                         </div>
                         <div class="text-right">
-                            <span class="text-sm font-extrabold text-neonCyan">${st.pct}%</span>
+                            <span class="text-sm font-extrabold text-neonPurple">${st.pct}%</span>
                             <span class="block text-[10px] text-slate-400">${100 - st.pct}% left</span>
                         </div>
                     </div>
-                    <div class="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                    <div class="w-full h-2 bg-slate-200 dark:bg-neutral-800 rounded-full overflow-hidden">
                         <div class="h-full bg-gradient-to-r from-neonPurple to-neonCyan transition-all duration-300" style="width: ${st.pct}%"></div>
                     </div>
                 </div>
@@ -1118,16 +1113,16 @@ function renderDashboardSection(metrics) {
       .slice(0, 3)
       .map(
         (w) => `
-            <div class="p-3 rounded-xl bg-amber-500/5 border border-amber-500/20">
+            <div class="p-3 rounded-xl bg-electricYellow/5 border border-electricYellow/25">
                 <div class="flex justify-between items-start text-xs">
                     <div>
-                        <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-amber-500/20 text-amber-500">${escapeHtml(w.subjectName)}</span>
+                        <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-electricYellow/20 text-electricYellow">${escapeHtml(w.subjectName)}</span>
                         <h5 class="font-bold text-slate-800 dark:text-slate-200 mt-1">${escapeHtml(w.topicName)}</h5>
                     </div>
-                    <span class="font-bold text-amber-500">${w.progress}% Done</span>
+                    <span class="font-bold text-electricYellow">${w.progress}% Done</span>
                 </div>
-                <div class="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden mt-2">
-                    <div class="h-full bg-amber-500" style="width: ${w.progress}%"></div>
+                <div class="w-full h-1.5 bg-slate-200 dark:bg-neutral-800 rounded-full overflow-hidden mt-2">
+                    <div class="h-full bg-electricYellow" style="width: ${w.progress}%"></div>
                 </div>
             </div>
         `,
@@ -1144,14 +1139,14 @@ function renderDashboardSection(metrics) {
       .slice(0, 4)
       .map(
         (td) => `
-            <div onclick="toggleTodoComplete('${td.id}')" class="cursor-pointer flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60 text-xs transition">
+            <div onclick="toggleTodoComplete('${td.id}')" class="cursor-pointer flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-neutral-900/90 hover:bg-slate-100 dark:hover:bg-neutral-800 border border-slate-200 dark:border-darkBorder text-xs transition">
                 <div class="flex items-center gap-2.5 truncate pr-2">
-                    <span class="w-5 h-5 rounded-md flex items-center justify-center ${td.completed ? "bg-emerald-500 text-white" : "border border-slate-400"}">
+                    <span class="w-5 h-5 rounded-md flex items-center justify-center ${td.completed ? "bg-neonPurple text-black" : "border border-slate-500"}">
                         ${td.completed ? '<i class="fa-solid fa-check text-[10px]"></i>' : ""}
                     </span>
                     <span class="truncate ${td.completed ? "strikethrough-animated text-slate-400" : "text-slate-800 dark:text-slate-200 font-medium"}">${escapeHtml(td.text)}</span>
                 </div>
-                <span class="text-[10px] px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300">${escapeHtml(td.tag || "Task")}</span>
+                <span class="text-[10px] px-2 py-0.5 rounded bg-slate-200 dark:bg-neutral-800 text-neonCyan">${escapeHtml(td.tag || "Task")}</span>
             </div>
         `,
       )
@@ -1176,7 +1171,7 @@ function renderTodoSection() {
   const container = document.getElementById("todoListContainer");
   if (filtered.length === 0) {
     container.innerHTML = `
-            <div class="text-center py-12 bg-slate-50 dark:bg-slate-800/30 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700">
+            <div class="text-center py-12 bg-slate-50 dark:bg-neutral-900/40 rounded-2xl border border-dashed border-slate-300 dark:border-darkBorder">
                 <i class="fa-solid fa-clipboard-check text-3xl text-slate-400 mb-2"></i>
                 <p class="text-sm text-slate-500 dark:text-slate-400">No tasks found in this filter. Add a new daily task above!</p>
             </div>
@@ -1189,16 +1184,16 @@ function renderTodoSection() {
       (todo) => `
         <div class="flex items-center justify-between gap-3 p-4 rounded-2xl border transition ${
           todo.completed
-            ? "bg-emerald-500/5 border-emerald-500/30 dark:bg-emerald-950/20"
-            : "bg-slate-50 dark:bg-slate-800/70 border-slate-200 dark:border-slate-700 hover:border-emerald-500/50"
+            ? "bg-neonPurple/5 border-neonPurple/30"
+            : "bg-slate-50 dark:bg-neutral-900/90 border-slate-200 dark:border-darkBorder hover:border-neonPurple/50"
         }">
             <div class="flex items-center gap-3.5 flex-1 min-w-0 cursor-pointer" onclick="toggleTodoComplete('${todo.id}')">
                 <button type="button" class="w-7 h-7 rounded-xl flex items-center justify-center transition flex-shrink-0 ${
                   todo.completed
-                    ? "bg-emerald-500 text-white neon-glow-green"
-                    : "bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-600 hover:border-emerald-500"
+                    ? "bg-neonPurple text-black neon-glow-green"
+                    : "bg-white dark:bg-black border-2 border-slate-300 dark:border-neutral-700 hover:border-neonPurple"
                 }">
-                    ${todo.completed ? '<i class="fa-solid fa-check text-sm"></i>' : ""}
+                    ${todo.completed ? '<i class="fa-solid fa-check text-sm font-bold"></i>' : ""}
                 </button>
                 <div class="min-w-0 flex-1">
                     <p class="text-sm sm:text-base font-medium break-words transition ${
@@ -1214,12 +1209,12 @@ function renderTodoSection() {
             <div class="flex items-center gap-2 flex-shrink-0">
                 <span class="hidden sm:inline-block px-2.5 py-1 rounded-lg text-[11px] font-semibold ${
                   todo.completed
-                    ? "bg-emerald-500/20 text-emerald-400"
-                    : "bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300"
+                    ? "bg-neonPurple/20 text-neonPurple"
+                    : "bg-slate-200 dark:bg-neutral-800 text-neonCyan"
                 }">
                     ${todo.completed ? "✓ Completed" : escapeHtml(todo.tag || "Daily")}
                 </span>
-                <button onclick="deleteTodoItem('${todo.id}')" class="w-9 h-9 rounded-xl bg-rose-500/10 hover:bg-rose-500 text-rose-500 hover:text-white transition flex items-center justify-center" title="Delete Task">
+                <button onclick="deleteTodoItem('${todo.id}')" class="w-9 h-9 rounded-xl bg-neutral-800 hover:bg-electricYellow text-slate-400 hover:text-black transition flex items-center justify-center" title="Delete Task">
                     <i class="fa-solid fa-trash-can text-xs"></i>
                 </button>
             </div>
@@ -1236,7 +1231,7 @@ function renderSubjectsSection() {
 
   if (subjects.length === 0) {
     grid.innerHTML = `
-            <div class="col-span-full text-center py-10 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700">
+            <div class="col-span-full text-center py-10 bg-slate-50 dark:bg-neutral-900/40 rounded-2xl border border-dashed border-slate-300 dark:border-darkBorder">
                 <p class="text-sm text-slate-500">No subjects added yet. Enter a subject like "Calculus for Engineers" above and click Add Subject!</p>
             </div>
         `;
@@ -1252,29 +1247,29 @@ function renderSubjectsSection() {
       return `
             <div onclick="selectSubject('${subj.id}')" class="cursor-pointer p-5 rounded-2xl border-2 transition relative ${
               isSelected
-                ? "border-neonPurple bg-neonPurple/10 dark:bg-neonPurple/15 neon-glow-purple"
-                : "border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 hover:border-neonPurple/40"
+                ? "border-neonPurple bg-neonPurple/10 neon-glow-purple"
+                : "border-slate-200 dark:border-darkBorder bg-slate-50 dark:bg-neutral-900/80 hover:border-neonPurple/40"
             }">
                 <div class="flex items-start justify-between gap-2">
                     <div>
                         <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-neonPurple/20 text-neonPurple">Subject ${idx + 1}</span>
                         <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white mt-1.5">${escapeHtml(subj.name)}</h3>
                     </div>
-                    <button onclick="event.stopPropagation(); deleteSubject('${subj.id}')" class="w-8 h-8 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 flex items-center justify-center transition" title="Delete Subject">
+                    <button onclick="event.stopPropagation(); deleteSubject('${subj.id}')" class="w-8 h-8 rounded-lg text-slate-400 hover:text-electricYellow hover:bg-electricYellow/10 flex items-center justify-center transition" title="Delete Subject">
                         <i class="fa-solid fa-trash-can text-xs"></i>
                     </button>
                 </div>
 
                 <div class="grid grid-cols-3 gap-2 my-4 text-center">
-                    <div class="p-2 rounded-xl bg-white/70 dark:bg-slate-900/70">
+                    <div class="p-2 rounded-xl bg-white/70 dark:bg-black/60 border border-transparent dark:border-darkBorder">
                         <p class="text-xs font-bold text-slate-800 dark:text-slate-200">${st.totalUnits}</p>
                         <p class="text-[10px] text-slate-400">Units</p>
                     </div>
-                    <div class="p-2 rounded-xl bg-white/70 dark:bg-slate-900/70">
+                    <div class="p-2 rounded-xl bg-white/70 dark:bg-black/60 border border-transparent dark:border-darkBorder">
                         <p class="text-xs font-bold text-neonCyan">${st.solvedQuestions}/${st.totalQuestions}</p>
                         <p class="text-[10px] text-slate-400">Questions</p>
                     </div>
-                    <div class="p-2 rounded-xl bg-white/70 dark:bg-slate-900/70">
+                    <div class="p-2 rounded-xl bg-white/70 dark:bg-black/60 border border-transparent dark:border-darkBorder">
                         <p class="text-xs font-bold text-electricYellow">🔄 ${st.totalRevisions}</p>
                         <p class="text-[10px] text-slate-400">Revisions</p>
                     </div>
@@ -1283,9 +1278,9 @@ function renderSubjectsSection() {
                 <div>
                     <div class="flex justify-between text-xs font-semibold mb-1">
                         <span class="text-slate-500 dark:text-slate-400">Completion</span>
-                        <span class="text-neonCyan">${st.pct}% Complete</span>
+                        <span class="text-neonPurple">${st.pct}% Complete</span>
                     </div>
-                    <div class="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                    <div class="w-full h-2 bg-slate-200 dark:bg-neutral-800 rounded-full overflow-hidden">
                         <div class="h-full bg-gradient-to-r from-neonPurple to-neonCyan transition-all duration-300" style="width: ${st.pct}%"></div>
                     </div>
                 </div>
@@ -1308,16 +1303,16 @@ function renderSubjectsSection() {
         <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b border-slate-200 dark:border-darkBorder">
             <div>
                 <div class="flex items-center gap-2">
-                    <span class="px-2.5 py-1 rounded-lg bg-neonPurple text-white text-xs font-bold">ACTIVE SUBJECT WINDOW</span>
+                    <span class="px-2.5 py-1 rounded-lg bg-neonPurple text-black text-xs font-bold">ACTIVE SUBJECT WINDOW</span>
                     <span class="text-xs text-slate-500 dark:text-slate-400">Overall: <strong class="text-neonCyan">${subjStats.pct}% Completed</strong> • 🔄 ${subjStats.totalRevisions} Total Revisions</span>
                 </div>
                 <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white mt-2">${escapeHtml(activeSubj.name)}</h2>
             </div>
 
-            <!-- Add Unit Form inside Subject (Inline Input - No Browser Prompt!) -->
+            <!-- Add Unit Form inside Subject -->
             <form onsubmit="handleAddUnit(event, '${activeSubj.id}')" class="flex gap-2">
-                <input type="text" id="newUnitNameInput" required placeholder="Add new unit (e.g., Unit 2)" class="px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:border-neonCyan">
-                <button type="submit" class="px-4 py-2.5 rounded-xl bg-neonCyan hover:bg-cyan-500 text-slate-950 font-bold text-xs sm:text-sm transition flex items-center gap-1.5 whitespace-nowrap shadow-md">
+                <input type="text" id="newUnitNameInput" required placeholder="Add new unit (e.g., Unit 2)" class="px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-neutral-900 border border-slate-200 dark:border-darkBorder text-sm focus:outline-none focus:border-neonCyan">
+                <button type="submit" class="px-4 py-2.5 rounded-xl bg-neonCyan hover:opacity-90 text-black font-bold text-xs sm:text-sm transition flex items-center gap-1.5 whitespace-nowrap shadow-md">
                     <i class="fa-solid fa-plus"></i>
                     <span>Add Unit</span>
                 </button>
@@ -1333,15 +1328,15 @@ function renderSubjectsSection() {
                 return `
                     <div class="flex items-center rounded-xl transition ${
                       isUnitActive
-                        ? "bg-gradient-to-r from-neonPurple to-indigo-600 text-white shadow-md"
-                        : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
+                        ? "bg-neonPurple text-black font-bold shadow-md"
+                        : "bg-slate-100 dark:bg-neutral-900 text-slate-700 dark:text-slate-300 border border-transparent dark:border-darkBorder hover:border-neonPurple/40"
                     }">
                         <button onclick="selectUnitTab('${u.id}')" class="px-4 py-2.5 text-xs sm:text-sm font-bold flex items-center gap-2 whitespace-nowrap">
                             <i class="fa-solid fa-folder-open"></i>
                             <span>${escapeHtml(u.name)}</span>
-                            <span class="px-1.5 py-0.5 rounded text-[10px] ${isUnitActive ? "bg-white/20 text-white" : "bg-slate-200 dark:bg-slate-700"}">${uStats.pct}%</span>
+                            <span class="px-1.5 py-0.5 rounded text-[10px] ${isUnitActive ? "bg-black/20 text-black" : "bg-slate-200 dark:bg-neutral-800 text-neonCyan"}">${uStats.pct}%</span>
                         </button>
-                        <button onclick="deleteUnit('${activeSubj.id}', '${u.id}')" class="pr-3 pl-1 py-2.5 text-xs opacity-70 hover:opacity-100 hover:text-rose-300" title="Delete Unit">
+                        <button onclick="deleteUnit('${activeSubj.id}', '${u.id}')" class="pr-3 pl-1 py-2.5 text-xs opacity-70 hover:opacity-100" title="Delete Unit">
                             <i class="fa-solid fa-xmark"></i>
                         </button>
                     </div>
@@ -1354,14 +1349,14 @@ function renderSubjectsSection() {
         ${
           !activeUnit
             ? `
-            <div class="text-center py-10 bg-slate-50 dark:bg-slate-800/40 rounded-2xl">
+            <div class="text-center py-10 bg-slate-50 dark:bg-neutral-900/40 rounded-2xl">
                 <p class="text-sm text-slate-400">No units in this subject yet. Use "Add Unit" above to create Unit 1!</p>
             </div>
         `
             : `
             <div class="space-y-6">
-                <!-- Add Chapter/Topic Form inside Active Unit (Inline Input - No Browser Prompt!) -->
-                <div class="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-200 dark:border-slate-700/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                <!-- Add Chapter/Topic Form inside Active Unit -->
+                <div class="bg-slate-50 dark:bg-neutral-900/90 p-4 rounded-2xl border border-slate-200 dark:border-darkBorder flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
                     <div>
                         <h3 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                             <i class="fa-solid fa-bookmark text-neonCyan"></i>
@@ -1370,8 +1365,8 @@ function renderSubjectsSection() {
                         <p class="text-xs text-slate-500 dark:text-slate-400">Add chapters/topics below, list practice questions inside each topic, and increment revisions (+1)</p>
                     </div>
                     <form onsubmit="handleAddTopic(event, '${activeSubj.id}', '${activeUnit.id}')" class="flex gap-2 min-w-[280px] sm:min-w-[360px]">
-                        <input type="text" id="newTopicNameInput" required placeholder="Add new chapter or topic..." class="flex-1 px-3.5 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:border-neonPurple">
-                        <button type="submit" class="px-4 py-2 rounded-xl bg-neonPurple hover:bg-purple-600 text-white font-semibold text-xs sm:text-sm transition whitespace-nowrap">
+                        <input type="text" id="newTopicNameInput" required placeholder="Add new chapter or topic..." class="flex-1 px-3.5 py-2 rounded-xl bg-white dark:bg-black border border-slate-200 dark:border-darkBorder text-sm focus:outline-none focus:border-neonPurple">
+                        <button type="submit" class="px-4 py-2 rounded-xl bg-neonPurple hover:opacity-90 text-black font-bold text-xs sm:text-sm transition whitespace-nowrap">
                             + Add Topic
                         </button>
                     </form>
@@ -1382,7 +1377,7 @@ function renderSubjectsSection() {
                     ${
                       (activeUnit.topics || []).length === 0
                         ? `
-                        <div class="text-center py-10 border border-dashed border-slate-300 dark:border-slate-700 rounded-2xl text-sm text-slate-400">
+                        <div class="text-center py-10 border border-dashed border-slate-300 dark:border-darkBorder rounded-2xl text-sm text-slate-400">
                             No chapters/topics added to this unit yet. Add your first topic above!
                         </div>
                     `
@@ -1394,18 +1389,18 @@ function renderSubjectsSection() {
                               return `
                             <div class="rounded-2xl border transition p-5 ${
                               tStats.isDone
-                                ? "bg-emerald-500/5 border-emerald-500/30 dark:bg-emerald-950/10"
-                                : "bg-slate-50/70 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700"
+                                ? "bg-neonPurple/5 border-neonPurple/30"
+                                : "bg-slate-50/70 dark:bg-neutral-900/60 border-slate-200 dark:border-darkBorder"
                             }">
                                 <!-- Topic Header Row -->
-                                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-200/80 dark:border-slate-700/80">
+                                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-200/80 dark:border-darkBorder">
                                     <div class="flex items-start gap-3">
                                         <button onclick="toggleTopicCompleted('${activeSubj.id}', '${activeUnit.id}', '${topic.id}')" class="mt-0.5 w-7 h-7 rounded-xl flex items-center justify-center flex-shrink-0 transition ${
                                           tStats.isDone
-                                            ? "bg-emerald-500 text-white neon-glow-green"
-                                            : "bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-600 hover:border-emerald-500"
+                                            ? "bg-neonPurple text-black neon-glow-green"
+                                            : "bg-white dark:bg-black border-2 border-slate-300 dark:border-neutral-700 hover:border-neonPurple"
                                         }" title="Mark Entire Topic Completed">
-                                            ${tStats.isDone ? '<i class="fa-solid fa-check text-xs"></i>' : ""}
+                                            ${tStats.isDone ? '<i class="fa-solid fa-check text-xs font-bold"></i>' : ""}
                                         </button>
                                         <div>
                                             <div class="flex flex-wrap items-center gap-2">
@@ -1415,7 +1410,7 @@ function renderSubjectsSection() {
                                                 </h4>
                                                 <span class="px-2 py-0.5 rounded-full text-[11px] font-bold ${
                                                   tStats.pct === 100
-                                                    ? "bg-emerald-500/20 text-emerald-400"
+                                                    ? "bg-neonPurple/20 text-neonPurple"
                                                     : "bg-neonCyan/15 text-neonCyan"
                                                 }">${tStats.pct}% Done</span>
                                             </div>
@@ -1434,17 +1429,17 @@ function renderSubjectsSection() {
                                     <!-- Topic Controls: Revision Counter (+1), Weak Area Toggle, Delete -->
                                     <div class="flex flex-wrap items-center gap-2.5">
                                         <!-- Revision Counter Box -->
-                                        <div class="flex items-center gap-1.5 bg-white dark:bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                                        <div class="flex items-center gap-1.5 bg-white dark:bg-black px-3 py-1.5 rounded-xl border border-slate-200 dark:border-darkBorder shadow-sm">
                                             <i class="fa-solid fa-rotate text-electricYellow text-xs"></i>
                                             <span class="text-xs font-semibold text-slate-600 dark:text-slate-300">Revised:</span>
-                                            <span class="px-2 py-0.5 rounded-lg bg-electricYellow/20 text-amber-600 dark:text-electricYellow font-extrabold text-sm">${topic.revisions || 0}</span>
-                                            <button onclick="incrementRevision('${activeSubj.id}', '${activeUnit.id}', '${topic.id}', 1)" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition shadow" title="Increment Revision Count (+1)">
+                                            <span class="px-2 py-0.5 rounded-lg bg-electricYellow/20 text-electricYellow font-extrabold text-sm">${topic.revisions || 0}</span>
+                                            <button onclick="incrementRevision('${activeSubj.id}', '${activeUnit.id}', '${topic.id}', 1)" class="px-2.5 py-1 rounded-lg bg-neonPurple hover:opacity-90 text-black font-bold text-xs transition shadow" title="Increment Revision Count (+1)">
                                                 +1 Revise
                                             </button>
                                             ${
                                               (topic.revisions || 0) > 0
                                                 ? `
-                                                <button onclick="incrementRevision('${activeSubj.id}', '${activeUnit.id}', '${topic.id}', -1)" class="px-1.5 py-1 rounded-lg bg-slate-200 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-white text-xs transition" title="Decrease revision count (-1)">
+                                                <button onclick="incrementRevision('${activeSubj.id}', '${activeUnit.id}', '${topic.id}', -1)" class="px-1.5 py-1 rounded-lg bg-slate-200 dark:bg-neutral-800 text-slate-500 hover:text-slate-800 dark:hover:text-white text-xs transition" title="Decrease revision count (-1)">
                                                     -1
                                                 </button>
                                             `
@@ -1455,15 +1450,15 @@ function renderSubjectsSection() {
                                         <!-- Weak Area Toggle -->
                                         <button onclick="toggleTopicWeakMark('${activeSubj.id}', '${activeUnit.id}', '${topic.id}')" class="px-3 py-2 rounded-xl text-xs font-bold border transition flex items-center gap-1.5 ${
                                           topic.isWeak
-                                            ? "bg-amber-500 text-slate-950 border-amber-400 shadow-md shadow-amber-500/20"
-                                            : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-amber-500"
+                                            ? "bg-electricYellow text-black border-electricYellow shadow-md"
+                                            : "bg-white dark:bg-black text-slate-600 dark:text-slate-300 border-slate-200 dark:border-darkBorder hover:border-electricYellow"
                                         }">
                                             <i class="fa-solid fa-bolt-lightning"></i>
                                             <span>${topic.isWeak ? "Weak Area (Flagged)" : "Mark as Weak Area"}</span>
                                         </button>
 
                                         <!-- Delete Topic -->
-                                        <button onclick="deleteTopic('${activeSubj.id}', '${activeUnit.id}', '${topic.id}')" class="w-8 h-8 rounded-xl bg-rose-500/10 hover:bg-rose-500 text-rose-500 hover:text-white flex items-center justify-center transition" title="Delete Topic">
+                                        <button onclick="deleteTopic('${activeSubj.id}', '${activeUnit.id}', '${topic.id}')" class="w-8 h-8 rounded-xl bg-neutral-800 hover:bg-electricYellow text-slate-400 hover:text-black flex items-center justify-center transition" title="Delete Topic">
                                             <i class="fa-solid fa-trash-can text-xs"></i>
                                         </button>
                                     </div>
@@ -1476,16 +1471,16 @@ function renderSubjectsSection() {
                                         (q) => `
                                         <div class="flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl transition ${
                                           q.completed
-                                            ? "bg-emerald-500/10 border border-emerald-500/30"
-                                            : "bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800"
+                                            ? "bg-neonPurple/10 border border-neonPurple/30"
+                                            : "bg-white dark:bg-black/80 border border-slate-200/80 dark:border-darkBorder"
                                         }">
                                             <div onclick="toggleQuestionSolved('${activeSubj.id}', '${activeUnit.id}', '${topic.id}', '${q.id}')" class="flex items-center gap-3 flex-1 cursor-pointer min-w-0">
                                                 <span class="w-5 h-5 rounded-lg flex items-center justify-center flex-shrink-0 transition ${
                                                   q.completed
-                                                    ? "bg-emerald-500 text-white neon-glow-green"
-                                                    : "border-2 border-slate-300 dark:border-slate-600 hover:border-emerald-400"
+                                                    ? "bg-neonPurple text-black neon-glow-green"
+                                                    : "border-2 border-slate-300 dark:border-neutral-700 hover:border-neonPurple"
                                                 }">
-                                                    ${q.completed ? '<i class="fa-solid fa-check text-[10px]"></i>' : ""}
+                                                    ${q.completed ? '<i class="fa-solid fa-check text-[10px] font-bold"></i>' : ""}
                                                 </span>
                                                 <span class="text-xs sm:text-sm break-words ${
                                                   q.completed
@@ -1494,8 +1489,8 @@ function renderSubjectsSection() {
                                                 }">${escapeHtml(q.text)}</span>
                                             </div>
                                             <div class="flex items-center gap-2">
-                                                ${q.completed ? '<span class="text-[10px] font-bold text-emerald-500">✓ Solved</span>' : ""}
-                                                <button onclick="deleteQuestion('${activeSubj.id}', '${activeUnit.id}', '${topic.id}', '${q.id}')" class="text-slate-400 hover:text-rose-500 p-1 transition" title="Delete Question">
+                                                ${q.completed ? '<span class="text-[10px] font-bold text-neonPurple">✓ Solved</span>' : ""}
+                                                <button onclick="deleteQuestion('${activeSubj.id}', '${activeUnit.id}', '${topic.id}', '${q.id}')" class="text-slate-400 hover:text-electricYellow p-1 transition" title="Delete Question">
                                                     <i class="fa-solid fa-xmark text-xs"></i>
                                                 </button>
                                             </div>
@@ -1504,10 +1499,10 @@ function renderSubjectsSection() {
                                       )
                                       .join("")}
 
-                                    <!-- Add Question Input inside Topic (Inline Form - No Browser Prompt!) -->
+                                    <!-- Add Question Input inside Topic -->
                                     <form onsubmit="handleAddQuestion(event, '${activeSubj.id}', '${activeUnit.id}', '${topic.id}')" class="flex gap-2 pt-2">
-                                        <input type="text" id="qInput_${topic.id}" required placeholder="Add practice question to this topic (e.g., Q1: Leibnitz Theorem Proof or Exercise 1.2 Q5)..." class="flex-1 px-3.5 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs sm:text-sm focus:outline-none focus:border-emerald-500">
-                                        <button type="submit" class="px-3.5 py-2 rounded-xl bg-slate-800 dark:bg-slate-700 hover:bg-emerald-600 text-white text-xs font-semibold transition whitespace-nowrap flex items-center gap-1.5">
+                                        <input type="text" id="qInput_${topic.id}" required placeholder="Add practice question to this topic (e.g., Q1: Leibnitz Theorem Proof or Exercise 1.2 Q5)..." class="flex-1 px-3.5 py-2 rounded-xl bg-white dark:bg-black border border-slate-200 dark:border-darkBorder text-xs sm:text-sm focus:outline-none focus:border-neonPurple">
+                                        <button type="submit" class="px-3.5 py-2 rounded-xl bg-neonCyan hover:opacity-90 text-black text-xs font-bold transition whitespace-nowrap flex items-center gap-1.5">
                                             <i class="fa-solid fa-plus"></i>
                                             <span>Add Question</span>
                                         </button>
@@ -1546,8 +1541,8 @@ function renderWeakSection(metrics) {
 
   if (weakAreas.length === 0) {
     listEl.innerHTML = `
-            <div class="col-span-full text-center py-12 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700">
-                <i class="fa-solid fa-shield-heart text-3xl text-emerald-500 mb-2"></i>
+            <div class="col-span-full text-center py-12 bg-slate-50 dark:bg-neutral-900/40 rounded-2xl border border-dashed border-slate-300 dark:border-darkBorder">
+                <i class="fa-solid fa-shield-heart text-3xl text-neonPurple mb-2"></i>
                 <p class="text-sm text-slate-500 dark:text-slate-400">No weak areas listed right now! Add one above or click "Mark as Weak Area" on any topic inside your subjects.</p>
             </div>
         `;
@@ -1557,17 +1552,17 @@ function renderWeakSection(metrics) {
   listEl.innerHTML = weakAreas
     .map(
       (w) => `
-        <div class="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex flex-col justify-between gap-4">
+        <div class="p-5 rounded-2xl bg-slate-50 dark:bg-neutral-900/80 border border-slate-200 dark:border-darkBorder flex flex-col justify-between gap-4">
             <div>
                 <div class="flex items-start justify-between gap-2">
-                    <span class="px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-amber-500/20 text-amber-500 border border-amber-500/30">
+                    <span class="px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-electricYellow/20 text-electricYellow border border-electricYellow/30">
                         ${escapeHtml(w.subjectName)}
                     </span>
-                    <button onclick="deleteWeakArea('${w.id}')" class="text-slate-400 hover:text-rose-500 transition" title="Remove Weak Area">
+                    <button onclick="deleteWeakArea('${w.id}')" class="text-slate-400 hover:text-electricYellow transition" title="Remove Weak Area">
                         <i class="fa-solid fa-trash-can text-xs"></i>
                     </button>
                 </div>
-                <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white mt-2 ${w.progress === 100 ? "strikethrough-animated text-emerald-400" : ""}">
+                <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white mt-2 ${w.progress === 100 ? "strikethrough-animated text-neonPurple" : ""}">
                     ${escapeHtml(w.topicName)}
                 </h3>
                 <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
@@ -1575,21 +1570,21 @@ function renderWeakSection(metrics) {
                 </p>
             </div>
 
-            <div class="space-y-2 pt-3 border-t border-slate-200 dark:border-slate-700/70">
+            <div class="space-y-2 pt-3 border-t border-slate-200 dark:border-darkBorder">
                 <div class="flex items-center justify-between text-xs font-bold">
                     <span class="text-slate-500 dark:text-slate-400">Improvement Progress:</span>
-                    <span class="${w.progress === 100 ? "text-emerald-500" : "text-amber-500"} text-sm">${w.progress}%</span>
+                    <span class="${w.progress === 100 ? "text-neonPurple" : "text-electricYellow"} text-sm">${w.progress}%</span>
                 </div>
 
                 <input type="range" min="0" max="100" step="5" value="${w.progress}"
                     onchange="updateWeakProgress('${w.id}', this.value)"
-                    class="w-full accent-amber-500 cursor-pointer h-2 bg-slate-200 dark:bg-slate-700 rounded-lg">
+                    class="w-full accent-neonPurple cursor-pointer h-2 bg-slate-200 dark:bg-neutral-800 rounded-lg">
 
                 <div class="flex items-center justify-between gap-1 pt-1">
-                    <button onclick="updateWeakProgress('${w.id}', ${Math.min(100, (Number(w.progress) || 0) + 25)})" class="px-2.5 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/30 text-amber-500 text-xs font-bold transition">
+                    <button onclick="updateWeakProgress('${w.id}', ${Math.min(100, (Number(w.progress) || 0) + 25)})" class="px-2.5 py-1 rounded-lg bg-electricYellow/15 hover:bg-electricYellow/30 text-electricYellow text-xs font-bold transition">
                         +25% Progress
                     </button>
-                    <button onclick="updateWeakProgress('${w.id}', 100)" class="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition flex items-center gap-1">
+                    <button onclick="updateWeakProgress('${w.id}', 100)" class="px-3 py-1 rounded-lg bg-neonPurple hover:opacity-90 text-black text-xs font-bold transition flex items-center gap-1">
                         <i class="fa-solid fa-check"></i> Mark Mastered (100%)
                     </button>
                 </div>

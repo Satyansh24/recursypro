@@ -1,338 +1,61 @@
 /* ============================================================================
-   RECURSY PRO — COMPLETE MASTER DARK & NEON AESTHETIC THEME ENGINE
-   Overrides scattered Tailwind colors into a unified, sleek cyber-dark palette
-   Palette: Deep Obsidian (#06080f) + Neon Orange (#ff6b00) + Electric Cyan (#00f2fe)
+   RECURSY PRO — PURE BLACK & NEON GREEN CYBER MATRIX THEME
    ============================================================================ */
 
-:root {
-  --bg-obsidian: #06080f;
-  --bg-surface: #0d111c;
-  --bg-elevated: #131926;
-  --bg-glass: rgba(13, 17, 28, 0.82);
-
-  --border-subtle: rgba(255, 255, 255, 0.07);
-  --border-highlight: rgba(255, 107, 0, 0.35);
-  --border-cyan: rgba(0, 242, 254, 0.35);
-
-  --accent-primary: #ff6b00; /* Cool Neon Orange */
-  --accent-primary-hover: #ff8533;
-  --accent-secondary: #f59e0b; /* Electric Amber */
-  --accent-cyan: #00f2fe; /* Cyber Cyan */
-  --accent-purple: #8b5cf6; /* Deep Neon Violet */
-  --accent-success: #10b981; /* Matrix Emerald */
-  --accent-danger: #f43f5e; /* Crimson Rose */
-
-  --text-main: #f8fafc;
-  --text-muted: #94a3b8;
-  --text-dim: #64748b;
-}
-
-/* --- 1. Base Body & Background Ambient Mesh --- */
 body {
   font-family: "Inter", sans-serif;
-  background-color: var(--bg-obsidian) !important;
-  background-image:
-    radial-gradient(
-      circle at 12% 15%,
-      rgba(255, 107, 0, 0.08) 0%,
-      transparent 35%
-    ),
-    radial-gradient(
-      circle at 88% 20%,
-      rgba(0, 242, 254, 0.06) 0%,
-      transparent 35%
-    ),
-    radial-gradient(
-      circle at 50% 85%,
-      rgba(139, 92, 246, 0.06) 0%,
-      transparent 45%
-    ) !important;
-  background-attachment: fixed;
-  color: var(--text-main) !important;
   transition:
-    background-color 0.3s ease,
-    color 0.3s ease;
-  overflow-x: hidden;
+    background-color 0.25s ease,
+    color 0.25s ease;
 }
 
-/* Light Mode Fallback (Clean Slate if toggled) */
-html:not(.dark) body {
-  background-color: #f8fafc !important;
+.dark body {
+  background-color: #050505;
   background-image:
     radial-gradient(
-      circle at 12% 15%,
-      rgba(255, 107, 0, 0.06) 0%,
+      circle at 15% 15%,
+      rgba(0, 255, 102, 0.05) 0%,
       transparent 35%
     ),
     radial-gradient(
-      circle at 88% 20%,
-      rgba(139, 92, 246, 0.05) 0%,
+      circle at 85% 80%,
+      rgba(0, 229, 255, 0.04) 0%,
       transparent 35%
-    ) !important;
-  color: #0f172a !important;
+    );
+  background-attachment: fixed;
 }
 
-/* --- 2. Custom Cyber Scrollbar --- */
+/* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: var(--bg-obsidian);
+  background: #050505;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
+  background: #1a1f26;
   border-radius: 9999px;
-  border: 1px solid rgba(255, 107, 0, 0.25);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--accent-primary);
-  box-shadow: 0 0 10px var(--accent-primary);
+  background: #00ff66;
 }
 
-/* --- 3. Header & Navigation Bar Glassmorphism --- */
-header.sticky {
-  background: rgba(6, 8, 15, 0.85) !important;
-  backdrop-filter: blur(18px) saturate(180%) !important;
-  -webkit-backdrop-filter: blur(18px) saturate(180%) !important;
-  border-bottom: 1px solid rgba(255, 107, 0, 0.15) !important;
-  box-shadow: 0 8px 32px -8px rgba(0, 0, 0, 0.7) !important;
-}
-
-header nav {
-  background: rgba(19, 25, 38, 0.95) !important;
-  border: 1px solid var(--border-subtle) !important;
-  padding: 0.3rem !important;
-}
-
-.nav-tab {
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
-  position: relative;
-}
-
-/* Active Nav Tab -> Neon Orange Gradient */
-.nav-tab.bg-neonPurple {
-  background: linear-gradient(135deg, #ff6b00 0%, #f59e0b 100%) !important;
-  color: #06080f !important;
-  font-weight: 700 !important;
-  box-shadow: 0 4px 18px -2px rgba(255, 107, 0, 0.5) !important;
-}
-
-.nav-tab:not(.bg-neonPurple):hover {
-  color: var(--accent-primary) !important;
-  background: rgba(255, 107, 0, 0.08) !important;
-}
-
-/* --- 4. Unified Cards, Containers & Modals --- */
-.dark .dark\:bg-darkCard,
-#confirmModal > div,
-#authScreen .max-w-4xl {
-  background: var(--bg-glass) !important;
-  backdrop-filter: blur(16px) !important;
-  -webkit-backdrop-filter: blur(16px) !important;
-  border: 1px solid var(--border-subtle) !important;
-  box-shadow: 0 14px 34px -10px rgba(0, 0, 0, 0.65) !important;
-}
-
-/* Inner Sub-cards (Topics, To-Dos, Subject items, Metric Boxes) */
-.dark .dark\:bg-slate-800\/60,
-.dark .dark\:bg-slate-800\/50,
-.dark .dark\:bg-slate-800\/40,
-.dark .dark\:bg-slate-800\/70,
-.dark .dark\:bg-slate-800\/80,
-.dark .dark\:bg-slate-800\/90,
-.dark .dark\:bg-slate-800 {
-  background-color: var(--bg-elevated) !important;
-  border-color: rgba(255, 255, 255, 0.06) !important;
-  transition:
-    transform 0.22s ease,
-    border-color 0.22s ease,
-    box-shadow 0.22s ease !important;
-}
-
-/* Hover Lift & Glow on Interactive Cards */
-#dashSubjectList > div:hover,
-#subjectsGridContainer > div:hover,
-.grid.lg\:grid-cols-4 > div:hover {
-  transform: translateY(-3px);
-  border-color: rgba(255, 107, 0, 0.45) !important;
-  box-shadow: 0 12px 28px -8px rgba(255, 107, 0, 0.2) !important;
-}
-
-/* --- 5. Hero Banners (Auth Screen & Dashboard Welcome Banner) --- */
-.bg-gradient-to-r.from-slate-900.via-purple-950.to-slate-900,
-.bg-gradient-to-br.from-purple-900.via-indigo-950.to-slate-900 {
-  background: linear-gradient(
-    135deg,
-    #0b0f19 0%,
-    #1a1025 50%,
-    #090d16 100%
-  ) !important;
-  border: 1px solid rgba(255, 107, 0, 0.28) !important;
-  box-shadow:
-    0 20px 50px -15px rgba(0, 0, 0, 0.8),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.1) !important;
-}
-
-/* --- 6. Color Standardization (Unifying Scattered Purple/Cyan/Yellow) --- */
-
-/* Primary Brand Accents (Converting scattered neonPurple to Cool Neon Orange) */
-.text-neonPurple,
-.hover\:text-neonPurple:hover {
-  color: var(--accent-primary) !important;
-}
-
-.bg-neonPurple {
-  background: linear-gradient(135deg, #ff6b00 0%, #ea580c 100%) !important;
-  color: #ffffff !important;
-  box-shadow: 0 4px 16px -3px rgba(255, 107, 0, 0.45) !important;
-}
-
-.bg-neonPurple:hover,
-.hover\:bg-purple-600:hover {
-  background: linear-gradient(135deg, #ff8533 0%, #f97316 100%) !important;
-  box-shadow: 0 6px 22px -2px rgba(255, 107, 0, 0.65) !important;
-  transform: translateY(-1px);
-}
-
-.bg-neonPurple\/10,
-.bg-neonPurple\/15,
-.bg-neonPurple\/20,
-.dark .dark\:bg-neonPurple\/15 {
-  background-color: rgba(255, 107, 0, 0.12) !important;
-  border-color: rgba(255, 107, 0, 0.35) !important;
-}
-
-.border-neonPurple,
-.border-neonPurple\/40,
-.dark .dark\:border-neonPurple\/40 {
-  border-color: rgba(255, 107, 0, 0.5) !important;
-}
-
-/* Secondary Accents (Keeping Electric Cyan crisp & consistent) */
-.text-neonCyan {
-  color: var(--accent-cyan) !important;
-}
-
-.bg-neonCyan {
-  background: linear-gradient(135deg, #00f2fe 0%, #06b6d4 100%) !important;
-  color: #06080f !important;
-  font-weight: 700 !important;
-  box-shadow: 0 4px 16px -3px rgba(0, 242, 254, 0.4) !important;
-}
-
-.bg-neonCyan\/10,
-.bg-neonCyan\/15 {
-  background-color: rgba(0, 242, 254, 0.1) !important;
-}
-
-/* Electric Amber / Revision / Weak Area Accents */
-.text-electricYellow,
-.text-amber-500,
-.text-amber-400 {
-  color: var(--accent-secondary) !important;
-}
-
-/* --- 7. Unified Progress Bars & Gradient Text --- */
-.bg-gradient-to-r.from-neonPurple.to-neonCyan {
-  background: linear-gradient(
-    90deg,
-    #ff6b00 0%,
-    #f59e0b 50%,
-    #00f2fe 100%
-  ) !important;
-  box-shadow: 0 0 12px rgba(255, 107, 0, 0.45);
-}
-
-.bg-gradient-to-r.from-amber-500.to-emerald-400,
-.bg-gradient-to-r.from-amber-500.to-emerald-500 {
-  background: linear-gradient(90deg, #ff6b00 0%, #10b981 100%) !important;
-  box-shadow: 0 0 12px rgba(16, 185, 129, 0.35);
-}
-
-#BannerUserName {
-  background: linear-gradient(90deg, #ff6b00, #f59e0b, #00f2fe) !important;
-  -webkit-background-clip: text !important;
-  background-clip: text !important;
-  color: transparent !important;
-}
-
-/* --- 8. Buttons & Unit Tabs Harmonization --- */
-.bg-gradient-to-r.from-neonPurple.to-indigo-600,
-.bg-gradient-to-tr.from-neonPurple.to-neonCyan {
-  background: linear-gradient(135deg, #ff6b00 0%, #f59e0b 100%) !important;
-  color: #06080f !important;
-  font-weight: 700 !important;
-  box-shadow: 0 6px 20px -4px rgba(255, 107, 0, 0.5) !important;
-}
-
-/* Emerald Task / Completion Buttons */
-.bg-emerald-600,
-.bg-emerald-500 {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
-  box-shadow: 0 4px 14px -3px rgba(16, 185, 129, 0.45) !important;
-}
-
-/* --- 9. Form Inputs, Selects & Focus Rings --- */
-input[type="text"],
-input[type="email"],
-input[type="password"],
-select {
-  background-color: rgba(6, 8, 15, 0.75) !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  color: var(--text-main) !important;
-  transition: all 0.2s ease !important;
-}
-
-html:not(.dark) input[type="text"],
-html:not(.dark) input[type="email"],
-html:not(.dark) input[type="password"],
-html:not(.dark) select {
-  background-color: #ffffff !important;
-  border: 1px solid #cbd5e1 !important;
-  color: #0f172a !important;
-}
-
-input:focus,
-select:focus {
-  border-color: var(--accent-primary) !important;
-  box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.2) !important;
-  outline: none !important;
-}
-
-/* Custom Range Slider (Weak Areas Progress) */
-input[type="range"] {
-  accent-color: var(--accent-primary) !important;
-  height: 6px !important;
-  border-radius: 999px !important;
-}
-
-/* --- 10. Animated Strikethrough & Custom Neon Glow Classes --- */
+/* Animated Neon Green Strikethrough on Completed Items */
 .strikethrough-animated {
   text-decoration: line-through;
   text-decoration-thickness: 2px;
-  text-decoration-color: var(--accent-success);
+  text-decoration-color: #00ff66;
   opacity: 0.55;
-  transition: opacity 0.25s ease;
 }
 
+/* Aesthetic Neon Glows */
 .neon-glow-purple {
-  box-shadow: 0 0 28px -4px rgba(255, 107, 0, 0.45) !important;
-  border-color: var(--accent-primary) !important;
+  box-shadow: 0 0 22px -4px rgba(0, 255, 102, 0.35);
 }
-
 .neon-glow-cyan {
-  box-shadow: 0 0 24px -5px rgba(0, 242, 254, 0.45) !important;
+  box-shadow: 0 0 20px -5px rgba(0, 229, 255, 0.35);
 }
-
 .neon-glow-green {
-  box-shadow: 0 0 18px -3px rgba(16, 185, 129, 0.6) !important;
-}
-
-/* Active Subject Window Special Border Glow */
-#activeSubjectWorkspace {
-  border: 1px solid rgba(255, 107, 0, 0.35) !important;
-  box-shadow:
-    0 20px 50px -12px rgba(0, 0, 0, 0.75),
-    0 0 30px -10px rgba(255, 107, 0, 0.15) !important;
+  box-shadow: 0 0 16px -3px rgba(0, 255, 102, 0.5);
 }
