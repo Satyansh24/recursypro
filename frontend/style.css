@@ -1,0 +1,39 @@
+body {
+    font-family: 'Inter', sans-serif;
+    transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: rgba(17, 24, 39, 0.4);
+}
+::-webkit-scrollbar-thumb {
+    background: #4b5563;
+    border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #a855f7;
+}
+
+/* Animated Green Strikethrough on Completed Items */
+.strikethrough-animated {
+    text-decoration: line-through;
+    text-decoration-thickness: 2px;
+    text-decoration-color: #10b981;
+    opacity: 0.65;
+}
+
+/* Aesthetic Neon Glows */
+.neon-glow-purple {
+    box-shadow: 0 0 22px -4px rgba(168, 85, 247, 0.45);
+}
+.neon-glow-cyan {
+    box-shadow: 0 0 20px -5px rgba(6, 182, 212, 0.4);
+}
+.neon-glow-green {
+    box-shadow: 0 0 15px -3px rgba(16, 185, 129, 0.55);
+}

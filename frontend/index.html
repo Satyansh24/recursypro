@@ -1,0 +1,1137 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Recursy — Personal Academic & Progress Tracker</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <!-- Font Awesome Icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+    />
+
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ["Inter", "sans-serif"],
+              display: ["Poppins", "sans-serif"],
+            },
+            colors: {
+              neonPurple: "#a855f7",
+              neonCyan: "#06b6d4",
+              electricYellow: "#eab308",
+              darkBg: "#0b0f19",
+              darkCard: "#111827",
+              darkBorder: "#1f2937",
+            },
+          },
+        },
+      };
+    </script>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body
+    class="bg-slate-50 text-slate-900 dark:bg-darkBg dark:text-slate-100 min-h-screen flex flex-col selection:bg-neonPurple selection:text-white"
+  >
+    <!-- Toast Notification Container -->
+    <div
+      id="toastContainer"
+      class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none px-4 sm:px-0"
+    ></div>
+
+    <!-- Custom Confirmation Modal (No Ugly Browser Prompts!) -->
+    <div
+      id="confirmModal"
+      class="fixed inset-0 z-50 hidden items-center justify-center bg-black/75 backdrop-blur-sm p-4"
+    >
+      <div
+        class="bg-white dark:bg-darkCard border border-slate-200 dark:border-darkBorder rounded-2xl max-w-md w-full p-6 shadow-2xl transform transition-all"
+      >
+        <div class="flex items-center gap-3 text-rose-500 mb-3">
+          <i class="fa-solid fa-triangle-exclamation text-2xl"></i>
+          <h3
+            id="confirmTitle"
+            class="text-lg font-bold text-slate-900 dark:text-white"
+          >
+            Confirm Deletion
+          </h3>
+        </div>
+        <p
+          id="confirmMessage"
+          class="text-sm text-slate-600 dark:text-slate-300 mb-6"
+        >
+          Are you sure you want to delete this item? This action cannot be
+          undone.
+        </p>
+        <div class="flex justify-end gap-3">
+          <button
+            id="confirmCancelBtn"
+            class="px-4 py-2 rounded-xl text-sm font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition"
+          >
+            Cancel
+          </button>
+          <button
+            id="confirmOkBtn"
+            class="px-4 py-2 rounded-xl text-sm font-semibold bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-600/30 transition"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== AUTHENTICATION SCREEN ==================== -->
+    <div
+      id="authScreen"
+      class="fixed inset-0 z-40 flex items-center justify-center bg-slate-100 dark:bg-darkBg p-4 overflow-y-auto"
+    >
+      <div
+        class="max-w-4xl w-full grid grid-cols-1 lg:grid-cols-12 bg-white dark:bg-darkCard rounded-3xl overflow-hidden shadow-2xl border border-slate-200 dark:border-darkBorder my-8"
+      >
+        <!-- Left Side Aesthetic Banner -->
+        <div
+          class="lg:col-span-6 bg-gradient-to-br from-purple-900 via-indigo-950 to-slate-900 p-8 text-white flex flex-col justify-between relative overflow-hidden"
+        >
+          <div
+            class="absolute -top-20 -left-20 w-64 h-64 bg-neonPurple/25 rounded-full blur-3xl"
+          ></div>
+          <div
+            class="absolute -bottom-20 -right-20 w-64 h-64 bg-neonCyan/25 rounded-full blur-3xl"
+          ></div>
+
+          <div class="relative z-10">
+            <div class="flex items-center gap-3 mb-6">
+              <div
+                class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-neonPurple to-neonCyan flex items-center justify-center text-white font-bold text-xl shadow-lg"
+              >
+                <i class="fa-solid fa-graduation-cap"></i>
+              </div>
+              <span class="font-display font-bold text-2xl tracking-tight"
+                >Recursy <span class="text-neonCyan">Pro</span></span
+              >
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-bold leading-tight mb-4">
+              Your Personal Academic & Syllabus Progress Ecosystem
+            </h1>
+            <p class="text-slate-300 text-sm leading-relaxed mb-6">
+              Manage your daily tasks, track subjects from units down to
+              individual practice questions, log revision counts (+1), and
+              master your weak areas — all synced automatically with MongoDB
+              Atlas.
+            </p>
+          </div>
+
+          <div
+            class="space-y-3 relative z-10 text-xs sm:text-sm text-slate-200"
+          >
+            <div
+              class="flex items-center gap-3 bg-white/5 p-3 rounded-xl border border-white/10"
+            >
+              <i class="fa-solid fa-circle-check text-emerald-400 text-lg"></i>
+              <span
+                ><strong>Daily To-Do List:</strong> Green tick completion with
+                strikethrough bar</span
+              >
+            </div>
+            <div
+              class="flex items-center gap-3 bg-white/5 p-3 rounded-xl border border-white/10"
+            >
+              <i class="fa-solid fa-layer-group text-neonCyan text-lg"></i>
+              <span
+                ><strong>Hierarchical Subjects:</strong> Subject &rarr; Unit
+                &rarr; Topic &rarr; Questions</span
+              >
+            </div>
+            <div
+              class="flex items-center gap-3 bg-white/5 p-3 rounded-xl border border-white/10"
+            >
+              <i class="fa-solid fa-rotate text-electricYellow text-lg"></i>
+              <span
+                ><strong>Revision & Weak Areas:</strong> +1 Revision counter &
+                recovery tracker</span
+              >
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Side Login / Register Form -->
+        <div class="lg:col-span-6 p-8 flex flex-col justify-center">
+          <div class="flex justify-between items-center mb-6">
+            <div>
+              <h2
+                id="authHeading"
+                class="text-2xl font-bold text-slate-900 dark:text-white"
+              >
+                Sign In to Recursy
+              </h2>
+              <p
+                id="authSubheading"
+                class="text-xs text-slate-500 dark:text-slate-400 mt-1"
+              >
+                Enter your email and password to access your study dashboard
+              </p>
+            </div>
+            <button
+              onclick="toggleTheme()"
+              class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-neonPurple transition"
+              title="Toggle Dark / Light Mode"
+            >
+              <i class="fa-solid fa-moon dark:hidden"></i>
+              <i
+                class="fa-solid fa-sun hidden dark:inline text-electricYellow"
+              ></i>
+            </button>
+          </div>
+
+          <!-- Mode Switch Tabs -->
+          <div
+            class="grid grid-cols-2 gap-2 p-1 bg-slate-100 dark:bg-slate-800/90 rounded-xl mb-6"
+          >
+            <button
+              id="tabLoginBtn"
+              onclick="switchAuthTab('login')"
+              class="py-2 text-sm font-semibold rounded-lg bg-white dark:bg-darkCard text-neonPurple shadow-sm transition"
+            >
+              Login
+            </button>
+            <button
+              id="tabRegisterBtn"
+              onclick="switchAuthTab('register')"
+              class="py-2 text-sm font-semibold rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition"
+            >
+              Sign Up
+            </button>
+          </div>
+
+          <form
+            id="authForm"
+            onsubmit="handleAuthSubmit(event)"
+            class="space-y-4"
+          >
+            <div id="nameFieldWrapper" class="hidden">
+              <label
+                class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5"
+                >Full Name</label
+              >
+              <div class="relative">
+                <i
+                  class="fa-solid fa-user absolute left-3.5 top-3.5 text-slate-400 text-sm"
+                ></i>
+                <input
+                  type="text"
+                  id="authName"
+                  placeholder="e.g., Satyansh Kumar Singh"
+                  class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:border-neonPurple"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label
+                class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5"
+                >Email Address</label
+              >
+              <div class="relative">
+                <i
+                  class="fa-solid fa-envelope absolute left-3.5 top-3.5 text-slate-400 text-sm"
+                ></i>
+                <input
+                  type="email"
+                  id="authEmail"
+                  required
+                  placeholder="satyansh@recursy.in"
+                  class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:border-neonPurple"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label
+                class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5"
+                >Password</label
+              >
+              <div class="relative">
+                <i
+                  class="fa-solid fa-lock absolute left-3.5 top-3.5 text-slate-400 text-sm"
+                ></i>
+                <input
+                  type="password"
+                  id="authPassword"
+                  required
+                  placeholder="••••••••"
+                  class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:border-neonPurple"
+                />
+              </div>
+            </div>
+
+            <div
+              id="authErrorMsg"
+              class="hidden text-xs text-rose-500 bg-rose-500/10 border border-rose-500/20 p-3 rounded-xl"
+            ></div>
+
+            <button
+              type="submit"
+              id="authSubmitBtn"
+              class="w-full py-3 rounded-xl bg-gradient-to-r from-neonPurple to-indigo-600 hover:from-purple-600 hover:to-indigo-500 text-white font-semibold text-sm shadow-lg shadow-neonPurple/30 transition flex items-center justify-center gap-2"
+            >
+              <span id="authSubmitText">Login to Dashboard</span>
+              <i class="fa-solid fa-arrow-right"></i>
+            </button>
+          </form>
+
+          <div class="my-5 flex items-center gap-3">
+            <div class="h-px bg-slate-200 dark:bg-slate-800 flex-1"></div>
+            <span class="text-xs text-slate-400">OR TEST INSTANTLY</span>
+            <div class="h-px bg-slate-200 dark:bg-slate-800 flex-1"></div>
+          </div>
+
+          <button
+            onclick="quickInstantDemo()"
+            class="w-full py-2.5 rounded-xl border border-neonCyan/50 bg-neonCyan/10 hover:bg-neonCyan/20 text-neonCyan font-semibold text-xs sm:text-sm transition flex items-center justify-center gap-2"
+          >
+            <i class="fa-solid fa-bolt"></i>
+            <span
+              >1-Click Instant Preview (Pre-loaded Calculus & DSA Sample)</span
+            >
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== MAIN APPLICATION LAYOUT ==================== -->
+    <div id="appContainer" class="hidden flex-1 flex flex-col min-h-screen">
+      <!-- Top Header Navbar (Exact Match to Screenshots) -->
+      <header
+        class="sticky top-0 z-30 bg-white/85 dark:bg-darkCard/85 backdrop-blur-md border-b border-slate-200 dark:border-darkBorder px-4 lg:px-8 py-3"
+      >
+        <div
+          class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3"
+        >
+          <!-- Brand -->
+          <div class="flex items-center gap-3">
+            <div
+              class="w-10 h-10 rounded-xl bg-gradient-to-tr from-neonPurple to-neonCyan flex items-center justify-center text-white font-bold text-lg shadow-md"
+            >
+              <i class="fa-solid fa-graduation-cap"></i>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <span
+                  class="font-display font-bold text-lg tracking-tight text-slate-900 dark:text-white"
+                  >Recursy <span class="text-neonPurple">Pro</span></span
+                >
+                <span
+                  id="cloudSyncBadge"
+                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
+                >
+                  <span
+                    class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"
+                  ></span>
+                  Cloud Synced
+                </span>
+              </div>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400">
+                Welcome back,
+                <strong
+                  id="headerUserName"
+                  class="text-slate-800 dark:text-slate-200"
+                  >Satyansh</strong
+                >! Keep pushing forward.
+              </p>
+            </div>
+          </div>
+
+          <!-- Navigation Pills -->
+          <nav
+            class="flex items-center gap-1 sm:gap-1.5 bg-slate-100 dark:bg-slate-800/90 p-1 rounded-2xl overflow-x-auto max-w-full"
+          >
+            <button
+              onclick="switchSection('dashboard')"
+              id="nav-dashboard"
+              class="nav-tab px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition flex items-center gap-2 whitespace-nowrap bg-neonPurple text-white shadow-sm"
+            >
+              <i class="fa-solid fa-chart-pie"></i>
+              <span>Dashboard</span>
+            </button>
+            <button
+              onclick="switchSection('todo')"
+              id="nav-todo"
+              class="nav-tab px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition flex items-center gap-2 whitespace-nowrap text-slate-600 dark:text-slate-300 hover:text-neonPurple"
+            >
+              <i class="fa-solid fa-check-double"></i>
+              <span>Daily To-Do</span>
+              <span
+                id="navTodoBadge"
+                class="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-200 dark:bg-slate-700"
+                >0</span
+              >
+            </button>
+            <button
+              onclick="switchSection('subjects')"
+              id="nav-subjects"
+              class="nav-tab px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition flex items-center gap-2 whitespace-nowrap text-slate-600 dark:text-slate-300 hover:text-neonPurple"
+            >
+              <i class="fa-solid fa-book-open"></i>
+              <span>Subjects & Progress Tracker</span>
+            </button>
+            <button
+              onclick="switchSection('weak')"
+              id="nav-weak"
+              class="nav-tab px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition flex items-center gap-2 whitespace-nowrap text-slate-600 dark:text-slate-300 hover:text-neonPurple"
+            >
+              <i class="fa-solid fa-bolt-lightning text-amber-500"></i>
+              <span>Weak Areas</span>
+              <span
+                id="navWeakBadge"
+                class="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-500/20 text-amber-400"
+                >0</span
+              >
+            </button>
+            <button
+              onclick="switchSection('backend')"
+              id="nav-backend"
+              class="nav-tab px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition flex items-center gap-2 whitespace-nowrap text-slate-600 dark:text-slate-300 hover:text-neonCyan"
+            >
+              <i class="fa-solid fa-server text-neonCyan"></i>
+              <span>Vercel Guide</span>
+            </button>
+          </nav>
+
+          <!-- User Controls & Theme Toggle -->
+          <div class="flex items-center gap-2">
+            <button
+              onclick="toggleTheme()"
+              class="px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:ring-2 hover:ring-neonPurple/50 transition flex items-center gap-2 text-xs font-semibold"
+              title="Switch between Dark Mode and Light Mode"
+            >
+              <i class="fa-solid fa-moon dark:hidden text-indigo-600"></i>
+              <span class="dark:hidden">Dark Mode</span>
+              <i
+                class="fa-solid fa-sun hidden dark:inline text-electricYellow"
+              ></i>
+              <span class="hidden dark:inline">Light Mode</span>
+            </button>
+
+            <button
+              onclick="handleLogout()"
+              class="px-3 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 text-xs font-semibold transition flex items-center gap-1.5"
+              title="Sign Out"
+            >
+              <i class="fa-solid fa-right-from-bracket"></i>
+              <span class="hidden sm:inline">Logout</span>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- Main Workspace Content -->
+      <main class="flex-1 max-w-7xl w-full mx-auto px-4 lg:px-8 py-6">
+        <!-- ==================== 1. DASHBOARD SECTION (SCREENSHOT 1) ==================== -->
+        <section id="section-dashboard" class="space-y-6">
+          <!-- Top Welcome & Overall Progress Banner -->
+          <div
+            class="relative rounded-3xl bg-gradient-to-r from-slate-900 via-purple-950 to-slate-900 text-white p-6 sm:p-8 shadow-xl overflow-hidden border border-purple-500/20"
+          >
+            <div
+              class="absolute -right-12 -top-12 w-56 h-56 bg-neonPurple/20 rounded-full blur-3xl pointer-events-none"
+            ></div>
+            <div
+              class="absolute left-1/3 -bottom-16 w-56 h-56 bg-neonCyan/15 rounded-full blur-3xl pointer-events-none"
+            ></div>
+
+            <div
+              class="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-6 items-center"
+            >
+              <div class="lg:col-span-7 space-y-2">
+                <span
+                  class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white/10 text-neonCyan border border-white/10"
+                >
+                  <i class="fa-solid fa-sparkles"></i> Long-Term Syllabus &
+                  Daily Goal Overview
+                </span>
+                <h1 class="text-2xl sm:text-3xl font-bold font-display">
+                  Welcome back,
+                  <span
+                    id="BannerUserName"
+                    class="text-transparent bg-clip-text bg-gradient-to-r from-neonCyan to-neonPurple"
+                    >Satyansh</span
+                  >!
+                </h1>
+                <p
+                  class="text-xs sm:text-sm text-slate-300 max-w-2xl leading-relaxed"
+                >
+                  Track your real-time academic progress across all subjects,
+                  units, chapters, solved questions, revision counts, and weak
+                  areas. Click any card below to jump straight into that
+                  section.
+                </p>
+                <div class="pt-3 flex flex-wrap gap-3">
+                  <button
+                    onclick="switchSection('subjects')"
+                    class="px-4 py-2.5 rounded-xl bg-neonPurple hover:bg-purple-600 text-white font-semibold text-xs sm:text-sm shadow-lg shadow-neonPurple/30 transition flex items-center gap-2"
+                  >
+                    <i class="fa-solid fa-book-open"></i> Open Subject Tracker
+                  </button>
+                  <button
+                    onclick="switchSection('todo')"
+                    class="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-xs sm:text-sm border border-white/15 transition flex items-center gap-2"
+                  >
+                    <i class="fa-solid fa-list-check"></i> View Daily To-Do List
+                  </button>
+                </div>
+              </div>
+
+              <!-- Progress Meters -->
+              <div
+                class="lg:col-span-5 grid grid-cols-1 sm:grid-cols-2 gap-4 bg-white/5 backdrop-blur-md p-4 rounded-2xl border border-white/10"
+              >
+                <div class="p-3.5 rounded-xl bg-white/5 border border-white/10">
+                  <p class="text-xs text-slate-300">
+                    Overall Syllabus Progress
+                  </p>
+                  <div class="flex items-baseline justify-between mt-1">
+                    <span
+                      id="dashOverallPct"
+                      class="text-3xl font-extrabold text-neonCyan"
+                      >0%</span
+                    >
+                    <span
+                      id="dashOverallRemaining"
+                      class="text-[11px] text-amber-300"
+                      >100% remaining</span
+                    >
+                  </div>
+                  <div
+                    class="w-full h-2.5 bg-slate-700 rounded-full overflow-hidden mt-3"
+                  >
+                    <div
+                      id="dashOverallBar"
+                      class="h-full bg-gradient-to-r from-neonPurple to-neonCyan transition-all duration-500"
+                      style="width: 0%"
+                    ></div>
+                  </div>
+                </div>
+
+                <div class="p-3.5 rounded-xl bg-white/5 border border-white/10">
+                  <p class="text-xs text-slate-300">Weak Area Recovery</p>
+                  <div class="flex items-baseline justify-between mt-1">
+                    <span
+                      id="dashWeakPct"
+                      class="text-3xl font-extrabold text-electricYellow"
+                      >0%</span
+                    >
+                    <span
+                      id="dashWeakCountText"
+                      class="text-[11px] text-slate-300"
+                      >0 weak topics</span
+                    >
+                  </div>
+                  <div
+                    class="w-full h-2.5 bg-slate-700 rounded-full overflow-hidden mt-3"
+                  >
+                    <div
+                      id="dashWeakBar"
+                      class="h-full bg-gradient-to-r from-amber-500 to-emerald-400 transition-all duration-500"
+                      style="width: 0%"
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 4 Key Metric Cards -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div
+              onclick="switchSection('todo')"
+              class="cursor-pointer bg-white dark:bg-darkCard p-5 rounded-2xl border border-slate-200 dark:border-darkBorder hover:border-emerald-500/50 transition shadow-sm"
+            >
+              <div class="flex items-center justify-between">
+                <div>
+                  <p
+                    class="text-xs font-medium text-slate-500 dark:text-slate-400"
+                  >
+                    Daily To-Do Tasks
+                  </p>
+                  <h3 id="statTodoCompleted" class="text-2xl font-bold mt-1">
+                    0 / 0
+                  </h3>
+                </div>
+                <div
+                  class="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center text-xl"
+                >
+                  <i class="fa-solid fa-circle-check"></i>
+                </div>
+              </div>
+              <p
+                id="statTodoSub"
+                class="text-xs text-emerald-500 mt-3 font-medium"
+              >
+                0% daily tasks completed
+              </p>
+            </div>
+
+            <div
+              onclick="switchSection('subjects')"
+              class="cursor-pointer bg-white dark:bg-darkCard p-5 rounded-2xl border border-slate-200 dark:border-darkBorder hover:border-neonPurple/50 transition shadow-sm"
+            >
+              <div class="flex items-center justify-between">
+                <div>
+                  <p
+                    class="text-xs font-medium text-slate-500 dark:text-slate-400"
+                  >
+                    Active Subjects
+                  </p>
+                  <h3 id="statSubjectsCount" class="text-2xl font-bold mt-1">
+                    0 Subjects
+                  </h3>
+                </div>
+                <div
+                  class="w-12 h-12 rounded-2xl bg-neonPurple/10 text-neonPurple flex items-center justify-center text-xl"
+                >
+                  <i class="fa-solid fa-book"></i>
+                </div>
+              </div>
+              <p
+                id="statTopicsSub"
+                class="text-xs text-neonPurple mt-3 font-medium"
+              >
+                0 Units • 0 Chapters
+              </p>
+            </div>
+
+            <div
+              onclick="switchSection('subjects')"
+              class="cursor-pointer bg-white dark:bg-darkCard p-5 rounded-2xl border border-slate-200 dark:border-darkBorder hover:border-neonCyan/50 transition shadow-sm"
+            >
+              <div class="flex items-center justify-between">
+                <div>
+                  <p
+                    class="text-xs font-medium text-slate-500 dark:text-slate-400"
+                  >
+                    Questions Solved
+                  </p>
+                  <h3 id="statQuestionsSolved" class="text-2xl font-bold mt-1">
+                    0 / 0
+                  </h3>
+                </div>
+                <div
+                  class="w-12 h-12 rounded-2xl bg-neonCyan/10 text-neonCyan flex items-center justify-center text-xl"
+                >
+                  <i class="fa-solid fa-code-branch"></i>
+                </div>
+              </div>
+              <p
+                id="statQuestionsPct"
+                class="text-xs text-neonCyan mt-3 font-medium"
+              >
+                0% practice questions green-ticked
+              </p>
+            </div>
+
+            <div
+              onclick="switchSection('subjects')"
+              class="cursor-pointer bg-white dark:bg-darkCard p-5 rounded-2xl border border-slate-200 dark:border-darkBorder hover:border-electricYellow/50 transition shadow-sm"
+            >
+              <div class="flex items-center justify-between">
+                <div>
+                  <p
+                    class="text-xs font-medium text-slate-500 dark:text-slate-400"
+                  >
+                    Total Revisions (+1)
+                  </p>
+                  <h3 id="statTotalRevisions" class="text-2xl font-bold mt-1">
+                    0 Times
+                  </h3>
+                </div>
+                <div
+                  class="w-12 h-12 rounded-2xl bg-electricYellow/10 text-electricYellow flex items-center justify-center text-xl"
+                >
+                  <i class="fa-solid fa-rotate"></i>
+                </div>
+              </div>
+              <p class="text-xs text-amber-500 mt-3 font-medium">
+                Cumulative topic revisions
+              </p>
+            </div>
+          </div>
+
+          <!-- Dashboard Split: Subject Progress List & Weak Areas + Quick To-Dos -->
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <!-- Left: Subject-wise Breakdown -->
+            <div
+              class="lg:col-span-7 bg-white dark:bg-darkCard rounded-2xl border border-slate-200 dark:border-darkBorder p-5 sm:p-6 shadow-sm"
+            >
+              <div class="flex items-center justify-between mb-4">
+                <div>
+                  <h2 class="text-lg font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-layer-group text-neonPurple"></i>
+                    <span>Subject-Wise Progress Breakdown</span>
+                  </h2>
+                  <p class="text-xs text-slate-500 dark:text-slate-400">
+                    Click any subject to open its Units, Chapters, Questions,
+                    and Revision Counter
+                  </p>
+                </div>
+                <button
+                  onclick="switchSection('subjects')"
+                  class="text-xs font-semibold text-neonPurple hover:underline"
+                >
+                  Manage All &rarr;
+                </button>
+              </div>
+              <div id="dashSubjectList" class="space-y-4"></div>
+            </div>
+
+            <!-- Right: Weak Areas & Pending Daily To-Dos -->
+            <div class="lg:col-span-5 space-y-6">
+              <!-- Weak Areas Card -->
+              <div
+                class="bg-white dark:bg-darkCard rounded-2xl border border-slate-200 dark:border-darkBorder p-5 sm:p-6 shadow-sm"
+              >
+                <div class="flex items-center justify-between mb-4">
+                  <div>
+                    <h2 class="text-lg font-bold flex items-center gap-2">
+                      <i
+                        class="fa-solid fa-triangle-exclamation text-amber-500"
+                      ></i>
+                      <span>Priority Weak Areas</span>
+                    </h2>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">
+                      Topics flagged for extra practice and improvement
+                    </p>
+                  </div>
+                  <button
+                    onclick="switchSection('weak')"
+                    class="text-xs font-semibold text-amber-500 hover:underline"
+                  >
+                    Open Weak Areas &rarr;
+                  </button>
+                </div>
+                <div id="dashWeakList" class="space-y-3"></div>
+              </div>
+
+              <!-- Quick Daily To-Do Card -->
+              <div
+                class="bg-white dark:bg-darkCard rounded-2xl border border-slate-200 dark:border-darkBorder p-5 sm:p-6 shadow-sm"
+              >
+                <div class="flex items-center justify-between mb-3">
+                  <h2 class="text-base font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-list-check text-emerald-500"></i>
+                    <span>Quick Daily To-Do List</span>
+                  </h2>
+                  <button
+                    onclick="switchSection('todo')"
+                    class="text-xs font-semibold text-emerald-500 hover:underline"
+                  >
+                    Full List &rarr;
+                  </button>
+                </div>
+                <div id="dashTodoPreview" class="space-y-2"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================== 2. DAILY TO-DO LIST SECTION (SCREENSHOT 2) ==================== -->
+        <section id="section-todo" class="hidden space-y-6">
+          <div
+            class="bg-white dark:bg-darkCard rounded-3xl border border-slate-200 dark:border-darkBorder p-6 sm:p-8 shadow-sm"
+          >
+            <div
+              class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-200 dark:border-darkBorder"
+            >
+              <div>
+                <span
+                  class="text-xs font-bold uppercase tracking-wider text-emerald-500"
+                  >Feature 01 • Daily Task Manager</span
+                >
+                <h1 class="text-2xl font-bold mt-1 flex items-center gap-2">
+                  <span>Daily To-Do List</span>
+                </h1>
+                <p
+                  class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1"
+                >
+                  List your daily study goals. Click the checkbox when done to
+                  mark it with a
+                  <strong class="text-emerald-500">Green Tick</strong> and put a
+                  <span class="line-through">strikethrough bar</span> across the
+                  task text.
+                </p>
+              </div>
+              <div
+                class="flex items-center gap-3 bg-slate-100 dark:bg-slate-800/80 px-4 py-3 rounded-2xl"
+              >
+                <div class="text-right">
+                  <p class="text-[11px] text-slate-500 dark:text-slate-400">
+                    Daily Completion
+                  </p>
+                  <p
+                    id="todoHeaderProgressText"
+                    class="text-lg font-bold text-emerald-500"
+                  >
+                    0% Completed
+                  </p>
+                </div>
+                <div
+                  class="w-10 h-10 rounded-xl bg-emerald-500/15 text-emerald-500 flex items-center justify-center text-lg"
+                >
+                  <i class="fa-solid fa-check-double"></i>
+                </div>
+              </div>
+            </div>
+
+            <!-- Add New Task Form (Inline Input + Tag Dropdown) -->
+            <form
+              onsubmit="handleAddTodo(event)"
+              class="mt-6 grid grid-cols-1 sm:grid-cols-12 gap-3"
+            >
+              <div class="sm:col-span-7 relative">
+                <i
+                  class="fa-solid fa-pen-to-square absolute left-4 top-3.5 text-slate-400"
+                ></i>
+                <input
+                  type="text"
+                  id="todoInputText"
+                  required
+                  placeholder="What do you need to accomplish today? (e.g., Solve 10 problems from Calculus Unit 1)"
+                  class="w-full pl-11 pr-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+              <div class="sm:col-span-3">
+                <select
+                  id="todoInputTag"
+                  class="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:border-emerald-500"
+                >
+                  <option value="Study Session">📚 Study Session</option>
+                  <option value="Revision">🔄 Revision</option>
+                  <option value="Practice">📝 Practice / Problems</option>
+                  <option value="Exam Prep">🔥 Exam Prep</option>
+                </select>
+              </div>
+              <div class="sm:col-span-2">
+                <button
+                  type="submit"
+                  class="w-full h-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm shadow-lg shadow-emerald-600/25 transition flex items-center justify-center gap-2"
+                >
+                  <i class="fa-solid fa-plus"></i>
+                  <span>Add Task</span>
+                </button>
+              </div>
+            </form>
+
+            <!-- Filter Buttons -->
+            <div class="flex flex-wrap items-center justify-between gap-3 mt-6">
+              <div class="flex items-center gap-2">
+                <button
+                  onclick="setTodoFilter('all')"
+                  id="todoFilter-all"
+                  class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500 text-white transition"
+                >
+                  All Tasks
+                </button>
+                <button
+                  onclick="setTodoFilter('pending')"
+                  id="todoFilter-pending"
+                  class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 transition"
+                >
+                  Pending
+                </button>
+                <button
+                  onclick="setTodoFilter('completed')"
+                  id="todoFilter-completed"
+                  class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 transition"
+                >
+                  Completed (Green Ticked)
+                </button>
+              </div>
+              <button
+                onclick="clearCompletedTodos()"
+                class="text-xs text-rose-500 hover:underline flex items-center gap-1"
+              >
+                <i class="fa-solid fa-broom"></i> Clear Completed Tasks
+              </button>
+            </div>
+
+            <!-- Task List Container -->
+            <div id="todoListContainer" class="mt-4 space-y-2.5"></div>
+          </div>
+        </section>
+
+        <!-- ==================== 3. SUBJECT PROGRESS TRACKER SECTION (SCREENSHOT 3, 4, 5) ==================== -->
+        <section id="section-subjects" class="hidden space-y-6">
+          <!-- Top Header & Add Subject Bar -->
+          <div
+            class="bg-white dark:bg-darkCard rounded-3xl border border-slate-200 dark:border-darkBorder p-6 shadow-sm"
+          >
+            <div
+              class="flex flex-col lg:flex-row lg:items-center justify-between gap-4"
+            >
+              <div>
+                <span
+                  class="text-xs font-bold uppercase tracking-wider text-neonPurple"
+                  >Feature 02 • Hierarchical Syllabus & Question Tracker</span
+                >
+                <h1 class="text-2xl font-bold mt-1">
+                  Subjects, Units, Chapters & Questions Tracker
+                </h1>
+                <p
+                  class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1"
+                >
+                  Select or add a <strong>Subject</strong> &rarr; Add
+                  <strong>Units</strong> inside it &rarr; Add
+                  <strong>Chapters/Topics</strong> &rarr; Green-tick solved
+                  <strong>Questions</strong> and click
+                  <strong>+1 Revise</strong>.
+                </p>
+              </div>
+
+              <!-- Add Subject Form (Inline Input - No Browser Prompt!) -->
+              <form
+                onsubmit="handleAddSubject(event)"
+                class="flex flex-col sm:flex-row gap-2.5 min-w-[300px] lg:min-w-[420px]"
+              >
+                <input
+                  type="text"
+                  id="newSubjectNameInput"
+                  required
+                  placeholder="Add new subject (e.g., Calculus for Engineers)"
+                  class="flex-1 px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:border-neonPurple"
+                />
+                <button
+                  type="submit"
+                  class="px-5 py-2.5 rounded-xl bg-neonPurple hover:bg-purple-600 text-white font-semibold text-sm shadow-lg shadow-neonPurple/25 transition flex items-center justify-center gap-2 whitespace-nowrap"
+                >
+                  <i class="fa-solid fa-folder-plus"></i>
+                  <span>Add Subject</span>
+                </button>
+              </form>
+            </div>
+
+            <!-- Subject Cards Grid (Subject 1, Subject 2, Subject 3...) -->
+            <div
+              id="subjectsGridContainer"
+              class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-6"
+            ></div>
+          </div>
+
+          <!-- Active Subject Detailed Window (Opens when clicking a subject) -->
+          <div
+            id="activeSubjectWorkspace"
+            class="bg-white dark:bg-darkCard rounded-3xl border-2 border-neonPurple/40 dark:border-neonPurple/40 p-6 sm:p-8 shadow-xl space-y-6"
+          >
+            <!-- Dynamic content rendered by app.js -->
+          </div>
+        </section>
+
+        <!-- ==================== 4. WEAK AREAS SECTION (SCREENSHOT 6) ==================== -->
+        <section id="section-weak" class="hidden space-y-6">
+          <div
+            class="bg-white dark:bg-darkCard rounded-3xl border border-slate-200 dark:border-darkBorder p-6 sm:p-8 shadow-sm"
+          >
+            <div
+              class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b border-slate-200 dark:border-darkBorder"
+            >
+              <div>
+                <span
+                  class="text-xs font-bold uppercase tracking-wider text-amber-500"
+                  >Feature 03 • Weak Area Improvement Zone</span
+                >
+                <h1 class="text-2xl font-bold mt-1 flex items-center gap-2">
+                  <i class="fa-solid fa-bolt-lightning text-amber-500"></i>
+                  <span>Weak Areas & Recovery Tracker</span>
+                </h1>
+                <p
+                  class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1"
+                >
+                  Pinpoint challenging topics across your subjects. Update your
+                  mastery percentage as you practice and turn weak areas into
+                  strengths.
+                </p>
+              </div>
+
+              <!-- Overall Weak Area Mastery Box -->
+              <div
+                class="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 min-w-[250px]"
+              >
+                <div class="flex items-center justify-between">
+                  <span
+                    class="text-xs font-semibold text-amber-600 dark:text-amber-300"
+                    >Overall Weak Area Recovery</span
+                  >
+                  <span
+                    id="weakSectionOverallPct"
+                    class="text-xl font-extrabold text-amber-500"
+                    >0%</span
+                  >
+                </div>
+                <div
+                  class="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden mt-2"
+                >
+                  <div
+                    id="weakSectionOverallBar"
+                    class="h-full bg-gradient-to-r from-amber-500 to-emerald-500 transition-all duration-300"
+                    style="width: 0%"
+                  ></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Add New Weak Point Form (Inline Inputs - No Browser Prompts!) -->
+            <form
+              onsubmit="handleAddWeakArea(event)"
+              class="mt-6 grid grid-cols-1 md:grid-cols-12 gap-3 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-700/70"
+            >
+              <div class="md:col-span-3">
+                <label
+                  class="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1"
+                  >Select Subject</label
+                >
+                <select
+                  id="weakSubjectSelect"
+                  class="w-full px-3 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:border-amber-500"
+                ></select>
+              </div>
+              <div class="md:col-span-4">
+                <label
+                  class="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1"
+                  >Weak Topic / Concept Name</label
+                >
+                <input
+                  type="text"
+                  id="weakTopicInput"
+                  required
+                  placeholder="e.g., Double & Triple Integrals Word Problems"
+                  class="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:border-amber-500"
+                />
+              </div>
+              <div class="md:col-span-3">
+                <label
+                  class="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1"
+                  >Action Plan</label
+                >
+                <input
+                  type="text"
+                  id="weakActionInput"
+                  placeholder="e.g., Solve 15 PYQs + Watch Lecture"
+                  class="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:border-amber-500"
+                />
+              </div>
+              <div class="md:col-span-2 flex items-end">
+                <button
+                  type="submit"
+                  class="w-full py-2.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-sm shadow-lg shadow-amber-500/20 transition flex items-center justify-center gap-1.5"
+                >
+                  <i class="fa-solid fa-plus"></i>
+                  <span>Add Weak Area</span>
+                </button>
+              </div>
+            </form>
+
+            <!-- Weak Areas List -->
+            <div
+              id="weakAreasListContainer"
+              class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4"
+            ></div>
+          </div>
+        </section>
+
+        <!-- ==================== 5. VERCEL & MONGODB DEPLOYMENT GUIDE ==================== -->
+        <section id="section-backend" class="hidden space-y-6">
+          <div
+            class="bg-white dark:bg-darkCard rounded-3xl border border-slate-200 dark:border-darkBorder p-6 sm:p-8 shadow-sm"
+          >
+            <div class="pb-6 border-b border-slate-200 dark:border-darkBorder">
+              <span
+                class="text-xs font-bold uppercase tracking-wider text-neonCyan"
+                >Full-Stack MERN Architecture • Vercel Deployment Guide</span
+              >
+              <h1 class="text-2xl font-bold mt-1">
+                Deploy Frontend & Backend on Vercel + Link MongoDB Atlas
+              </h1>
+              <p
+                class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1"
+              >
+                Follow these exact steps to run locally in VS Code and deploy
+                both folders (`backend/` and `frontend/`) to Vercel.
+              </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 my-6">
+              <div
+                class="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700"
+              >
+                <div class="text-neonPurple font-bold text-sm mb-2">
+                  <i class="fa-solid fa-laptop-code mr-1.5"></i> 1. Local VS
+                  Code Testing
+                </div>
+                <p
+                  class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed"
+                >
+                  Open terminal in <code>backend/</code> folder:<br />
+                  <code>npm install</code><br />
+                  <code>npm start</code><br />
+                  Put your MongoDB Atlas URI in <code>backend/.env</code>. Then
+                  open <code>frontend/index.html</code> with Live Server.
+                </p>
+              </div>
+              <div
+                class="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700"
+              >
+                <div class="text-neonCyan font-bold text-sm mb-2">
+                  <i class="fa-solid fa-cloud-arrow-up mr-1.5"></i> 2. Deploy
+                  Backend to Vercel
+                </div>
+                <p
+                  class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed"
+                >
+                  Push project to GitHub. In Vercel, import repo, set
+                  <strong>Root Directory</strong> to <code>backend</code>, and
+                  add Environment Variables: <code>MONGO_URI</code> and
+                  <code>JWT_SECRET</code>. Copy your live backend URL.
+                </p>
+              </div>
+              <div
+                class="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700"
+              >
+                <div class="text-emerald-500 font-bold text-sm mb-2">
+                  <i class="fa-solid fa-link mr-1.5"></i> 3. Link Frontend &
+                  Deploy
+                </div>
+                <p
+                  class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed"
+                >
+                  Open <code>frontend/app.js</code> (Line 6) and replace
+                  <code>http://localhost:5000/api</code> with your Vercel
+                  Backend URL (e.g.
+                  <code>https://recursy-api.vercel.app/api</code>). Deploy
+                  <code>frontend</code> folder to Vercel!
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <!-- Footer -->
+      <footer
+        class="border-t border-slate-200 dark:border-darkBorder py-4 px-4 lg:px-8 text-center text-xs text-slate-500 dark:text-slate-400 mt-auto"
+      >
+        Recursy Pro • Personal Academic & Syllabus Progress Ecosystem • MongoDB
+        Atlas & JWT Cloud Synced
+      </footer>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
