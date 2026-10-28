@@ -1,0 +1,19 @@
+1. weekly planner 
+isme week ka target hoga 
+
+2. my routine 
+isme aisa hoga ki student khud ka time table bna ske ki is time se is time tk muze ye krna hai aisa kr ke 
+
+3. long goals 
+isme student apne long term ke goals ko rkh skega 
+
+4. resources 
+isme resource ka nam ka ek directory bna skta hai aur resours ke ling ko paste kr ke rkh skta hai jb need hogi click kr ke open kr lega 
+ 5. flashbook 
+isme student koi test dal ke rkh skta hai , 
+koi vocab ho 
+koi video ho link ho 
+koi img ho jisko use bar bar dekhna imp ho 
+
+6. study timer 
+is section me student day wise apne study hours cont kr skte hai aur ye study hours ka dashboard pr dikhega day wise ki kis din kitna pdha hai ek graph type me candle graph data ke trh 

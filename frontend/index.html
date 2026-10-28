@@ -392,6 +392,19 @@
               <span>Subjects & Progress Tracker</span>
             </button>
             <button
+              onclick="switchSection('weekly')"
+              id="nav-weekly"
+              class="nav-tab px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition flex items-center gap-2 whitespace-nowrap text-slate-600 dark:text-slate-300 hover:text-neonPurple"
+            >
+              <i class="fa-solid fa-calendar-week text-neonCyan"></i>
+              <span>Weekly Planner</span>
+              <span
+                id="navWeeklyBadge"
+                class="px-1.5 py-0.2 rounded-full text-[10px] bg-neonCyan/20 text-neonCyan"
+                >0</span
+              >
+            </button>
+            <button
               onclick="switchSection('weak')"
               id="nav-weak"
               class="nav-tab px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition flex items-center gap-2 whitespace-nowrap text-slate-600 dark:text-slate-300 hover:text-neonPurple"
@@ -932,6 +945,167 @@
             class="bg-white dark:bg-darkCard rounded-3xl border border-neonPurple/30 p-6 sm:p-8 shadow-xl space-y-6"
           >
             <!-- Dynamic content rendered by app.js -->
+          </div>
+        </section>
+
+        <!-- ==================== 3.5 WEEKLY PLANNER SECTION ==================== -->
+        <section id="section-weekly" class="hidden space-y-6">
+          <div
+            class="bg-white dark:bg-darkCard rounded-3xl border border-slate-200 dark:border-darkBorder p-6 sm:p-8 shadow-sm"
+          >
+            <!-- Header & Progress Box -->
+            <div
+              class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b border-slate-200 dark:border-darkBorder"
+            >
+              <div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <span
+                    class="text-xs font-bold uppercase tracking-wider text-neonCyan"
+                    >Feature 03 • Weekly Target & Schedule Planner</span
+                  >
+                  <span
+                    id="weeklyDateRangeBadge"
+                    class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-neonPurple/15 text-neonPurple border border-neonPurple/30"
+                  >
+                    This Week
+                  </span>
+                </div>
+                <h1 class="text-2xl font-bold mt-1 flex items-center gap-2">
+                  <i class="fa-solid fa-calendar-check text-neonPurple"></i>
+                  <span>Weekly Study Planner & Targets</span>
+                </h1>
+                <p
+                  class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1"
+                >
+                  Set your weekly study targets with specific target dates. Tick
+                  them off as you complete them throughout the week.
+                </p>
+              </div>
+
+              <!-- Weekly Completion Meter -->
+              <div
+                class="bg-slate-100 dark:bg-neutral-900 border border-transparent dark:border-darkBorder rounded-2xl p-4 min-w-[260px]"
+              >
+                <div class="flex items-center justify-between">
+                  <span
+                    class="text-xs font-semibold text-slate-500 dark:text-slate-400"
+                    >Weekly Target Completion</span
+                  >
+                  <span
+                    id="weeklyHeaderPct"
+                    class="text-xl font-extrabold text-neonPurple"
+                    >0%</span
+                  >
+                </div>
+                <div
+                  class="w-full h-2 bg-slate-200 dark:bg-neutral-800 rounded-full overflow-hidden mt-2"
+                >
+                  <div
+                    id="weeklyHeaderBar"
+                    class="h-full bg-gradient-to-r from-neonPurple to-neonCyan transition-all duration-300"
+                    style="width: 0%"
+                  ></div>
+                </div>
+                <p
+                  id="weeklyHeaderSub"
+                  class="text-[11px] text-slate-400 mt-1.5 text-right"
+                >
+                  0 / 0 targets completed
+                </p>
+              </div>
+            </div>
+
+            <!-- Add Weekly Target Form -->
+            <form
+              onsubmit="handleAddWeeklyTask(event)"
+              class="mt-6 grid grid-cols-1 md:grid-cols-12 gap-3 bg-slate-50 dark:bg-neutral-900/70 p-4 rounded-2xl border border-slate-200 dark:border-darkBorder"
+            >
+              <div class="md:col-span-5">
+                <label
+                  class="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1"
+                  >Weekly Target / Goal</label
+                >
+                <input
+                  type="text"
+                  id="weeklyTaskInput"
+                  required
+                  placeholder="e.g., Complete Calculus Unit 2 + 15 DSA Questions"
+                  class="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-darkCard border border-slate-200 dark:border-darkBorder text-sm focus:outline-none focus:border-neonPurple"
+                />
+              </div>
+              <div class="md:col-span-3">
+                <label
+                  class="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1"
+                  >Target Date (Deadline)</label
+                >
+                <input
+                  type="date"
+                  id="weeklyDateInput"
+                  required
+                  class="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-darkCard border border-slate-200 dark:border-darkBorder text-sm focus:outline-none focus:border-neonCyan"
+                />
+              </div>
+              <div class="md:col-span-2">
+                <label
+                  class="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1"
+                  >Category Tag</label
+                >
+                <select
+                  id="weeklyTagInput"
+                  class="w-full px-3 py-2.5 rounded-xl bg-white dark:bg-darkCard border border-slate-200 dark:border-darkBorder text-sm focus:outline-none focus:border-neonPurple"
+                >
+                  <option value="🎯 Core Target">🎯 Core Target</option>
+                  <option value="📚 Syllabus Goal">📚 Syllabus Goal</option>
+                  <option value="💻 Coding / DSA">💻 Coding / DSA</option>
+                  <option value="📝 Assignment / Test">📝 Exam / Test</option>
+                </select>
+              </div>
+              <div class="md:col-span-2 flex items-end">
+                <button
+                  type="submit"
+                  class="w-full py-2.5 px-4 rounded-xl bg-neonPurple hover:opacity-90 text-black font-bold text-sm shadow-lg shadow-neonPurple/20 transition flex items-center justify-center gap-1.5"
+                >
+                  <i class="fa-solid fa-plus"></i>
+                  <span>Add Target</span>
+                </button>
+              </div>
+            </form>
+
+            <!-- Filter Buttons -->
+            <div class="flex flex-wrap items-center justify-between gap-3 mt-6">
+              <div class="flex items-center gap-2">
+                <button
+                  onclick="setWeeklyFilter('all')"
+                  id="weeklyFilter-all"
+                  class="px-3 py-1.5 rounded-lg text-xs font-bold bg-neonPurple text-black transition"
+                >
+                  All Targets
+                </button>
+                <button
+                  onclick="setWeeklyFilter('pending')"
+                  id="weeklyFilter-pending"
+                  class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-neutral-900 text-slate-600 dark:text-slate-300 transition"
+                >
+                  Pending
+                </button>
+                <button
+                  onclick="setWeeklyFilter('completed')"
+                  id="weeklyFilter-completed"
+                  class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-neutral-900 text-slate-600 dark:text-slate-300 transition"
+                >
+                  Completed
+                </button>
+              </div>
+              <button
+                onclick="clearCompletedWeeklyTasks()"
+                class="text-xs text-electricYellow hover:underline flex items-center gap-1"
+              >
+                <i class="fa-solid fa-broom"></i> Clear Completed Targets
+              </button>
+            </div>
+
+            <!-- Weekly Targets List Container -->
+            <div id="weeklyListContainer" class="mt-4 space-y-2.5"></div>
           </div>
         </section>
 

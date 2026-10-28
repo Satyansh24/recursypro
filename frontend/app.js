@@ -9,6 +9,7 @@ let appState = {
   user: null, // { userId, name, email }
   activeSection: "dashboard",
   todoFilter: "all",
+  weeklyFilter: "all",
   selectedSubjectId: null,
   selectedUnitId: null,
   collapsedTopics: {},
@@ -16,6 +17,7 @@ let appState = {
     todos: [],
     subjects: [],
     weakAreas: [],
+    weeklyTasks: [],
   },
 };
 
@@ -188,6 +190,28 @@ function createDefaultSampleData() {
         progress: 25,
       },
     ],
+    weeklyTasks: [
+      {
+        id: "wkt_1",
+        text: "Finish Calculus Unit 1 & Unit 2 Complete Revision",
+        targetDate: new Date(Date.now() + 86400000 * 2)
+          .toISOString()
+          .split("T")[0],
+        tag: "📚 Syllabus Goal",
+        completed: false,
+        createdAt: Date.now(),
+      },
+      {
+        id: "wkt_2",
+        text: "Solve 15 Linked List & Stack Problems on LeetCode/GFG",
+        targetDate: new Date(Date.now() + 86400000 * 4)
+          .toISOString()
+          .split("T")[0],
+        tag: "💻 Coding / DSA",
+        completed: true,
+        createdAt: Date.now(),
+      },
+    ],
   };
 }
 
@@ -230,7 +254,17 @@ function normalizeTrackerData(raw) {
       progress: Number(w.progress) || 0,
     }),
   );
-  return { todos, subjects, weakAreas };
+  const weeklyTasks = (
+    Array.isArray(raw.weeklyTasks) ? raw.weeklyTasks : []
+  ).map((wt) => ({
+    id: wt.id || "wkt_" + Date.now() + Math.random(),
+    text: wt.text || "Weekly Target",
+    targetDate: wt.targetDate || new Date().toISOString().split("T")[0],
+    tag: wt.tag || "🎯 Core Target",
+    completed: !!wt.completed,
+    createdAt: wt.createdAt || Date.now(),
+  }));
+  return { todos, subjects, weakAreas, weeklyTasks };
 }
 
 // --- Toast Notification Helper (Unified 3-Color Palette) ---
@@ -517,7 +551,7 @@ window.toggleTheme = function () {
 // --- Section Navigation Switcher ---
 window.switchSection = function (sectionName) {
   appState.activeSection = sectionName;
-  const sections = ["dashboard", "todo", "subjects", "weak"];
+  const sections = ["dashboard", "todo", "subjects", "weekly", "weak"];
   sections.forEach((s) => {
     const el = document.getElementById("section-" + s);
     const navBtn = document.getElementById("nav-" + s);
@@ -1028,6 +1062,11 @@ function renderAll() {
   renderDashboardSection(metrics);
   renderTodoSection();
   renderSubjectsSection();
+  const weeklyTasks = appState.data.weeklyTasks || [];
+  const pendingWeekly = weeklyTasks.filter((t) => !t.completed).length;
+  const navWeeklyBadge = document.getElementById("navWeeklyBadge");
+  if (navWeeklyBadge) navWeeklyBadge.textContent = pendingWeekly;
+  renderWeeklySection();
   renderWeakSection(metrics);
 }
 
@@ -1603,4 +1642,221 @@ function escapeHtml(str) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
+}
+
+// ==================== WEEKLY PLANNER HANDLERS & RENDERER ====================
+function getCurrentWeekRangeText() {
+  const now = new Date();
+  const day = now.getDay();
+  const diffToMon = now.getDate() - day + (day === 0 ? -6 : 1);
+  const monday = new Date(new Date().setDate(diffToMon));
+  const sunday = new Date(new Date(monday).setDate(monday.getDate() + 6));
+  const opts = { month: "short", day: "numeric" };
+  return `${monday.toLocaleDateString("en-US", opts)} – ${sunday.toLocaleDateString("en-US", opts)}`;
+}
+
+function formatTargetDateBadge(dateStr, isCompleted) {
+  if (!dateStr)
+    return { label: "No Date", badgeClass: "bg-neutral-800 text-slate-300" };
+  const todayStr = new Date().toISOString().split("T")[0];
+  const d = new Date(dateStr + "T00:00:00");
+  const formatted = d.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+
+  if (isCompleted) {
+    return {
+      label: `📅 ${formatted}`,
+      badgeClass: "bg-neonPurple/15 text-neonPurple",
+    };
+  }
+  if (dateStr === todayStr) {
+    return {
+      label: `🔥 Today (${formatted})`,
+      badgeClass: "bg-neonCyan/20 text-neonCyan border border-neonCyan/40",
+    };
+  }
+  if (dateStr < todayStr) {
+    return {
+      label: `⚠️ Overdue (${formatted})`,
+      badgeClass:
+        "bg-electricYellow/20 text-electricYellow border border-electricYellow/40",
+    };
+  }
+  return {
+    label: `📅 Target: ${formatted}`,
+    badgeClass: "bg-neutral-800 text-slate-300 border border-darkBorder",
+  };
+}
+
+window.handleAddWeeklyTask = async function (e) {
+  e.preventDefault();
+  const textInput = document.getElementById("weeklyTaskInput");
+  const dateInput = document.getElementById("weeklyDateInput");
+  const tagInput = document.getElementById("weeklyTagInput");
+
+  const text = textInput.value.trim();
+  const targetDate = dateInput.value || new Date().toISOString().split("T")[0];
+  const tag = tagInput.value || "🎯 Core Target";
+  if (!text) return;
+
+  if (!Array.isArray(appState.data.weeklyTasks)) {
+    appState.data.weeklyTasks = [];
+  }
+
+  appState.data.weeklyTasks.push({
+    id: "wkt_" + Date.now(),
+    text,
+    targetDate,
+    tag,
+    completed: false,
+    createdAt: Date.now(),
+  });
+
+  // Sort by targetDate ascending
+  appState.data.weeklyTasks.sort((a, b) =>
+    a.targetDate > b.targetDate ? 1 : -1,
+  );
+
+  textInput.value = "";
+  showToast("Weekly target scheduled!", "success");
+  await saveWorkspaceToCloud();
+};
+
+window.toggleWeeklyTaskComplete = async function (taskId) {
+  const item = (appState.data.weeklyTasks || []).find((t) => t.id === taskId);
+  if (!item) return;
+  item.completed = !item.completed;
+  if (item.completed) {
+    showToast("Weekly target achieved! Marked with green tick.", "success");
+  }
+  await saveWorkspaceToCloud();
+};
+
+window.deleteWeeklyTask = async function (taskId) {
+  appState.data.weeklyTasks = (appState.data.weeklyTasks || []).filter(
+    (t) => t.id !== taskId,
+  );
+  showToast("Weekly target removed.", "info");
+  await saveWorkspaceToCloud();
+};
+
+window.setWeeklyFilter = function (filter) {
+  appState.weeklyFilter = filter;
+  ["all", "pending", "completed"].forEach((f) => {
+    const btn = document.getElementById("weeklyFilter-" + f);
+    if (!btn) return;
+    if (f === filter) {
+      btn.className =
+        "px-3 py-1.5 rounded-lg text-xs font-bold bg-neonPurple text-black transition";
+    } else {
+      btn.className =
+        "px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-neutral-900 text-slate-600 dark:text-slate-300 transition";
+    }
+  });
+  renderWeeklySection();
+};
+
+window.clearCompletedWeeklyTasks = async function () {
+  const list = appState.data.weeklyTasks || [];
+  const count = list.filter((t) => t.completed).length;
+  if (count === 0) {
+    showToast("No completed weekly targets to clear.", "warning");
+    return;
+  }
+  appState.data.weeklyTasks = list.filter((t) => !t.completed);
+  showToast(`Cleared ${count} completed weekly target(s).`, "info");
+  await saveWorkspaceToCloud();
+};
+
+function renderWeeklySection() {
+  const rangeBadge = document.getElementById("weeklyDateRangeBadge");
+  if (rangeBadge)
+    rangeBadge.textContent = `🗓️ Week: ${getCurrentWeekRangeText()}`;
+
+  const dateInput = document.getElementById("weeklyDateInput");
+  if (dateInput && !dateInput.value) {
+    dateInput.value = new Date().toISOString().split("T")[0];
+  }
+
+  const tasks = appState.data.weeklyTasks || [];
+  const completedCount = tasks.filter((t) => t.completed).length;
+  const pct =
+    tasks.length > 0 ? Math.round((completedCount / tasks.length) * 100) : 0;
+
+  const pctEl = document.getElementById("weeklyHeaderPct");
+  const barEl = document.getElementById("weeklyHeaderBar");
+  const subEl = document.getElementById("weeklyHeaderSub");
+  if (pctEl) pctEl.textContent = `${pct}%`;
+  if (barEl) barEl.style.width = `${pct}%`;
+  if (subEl)
+    subEl.textContent = `${completedCount} / ${tasks.length} weekly targets completed`;
+
+  let filtered = tasks;
+  if (appState.weeklyFilter === "pending")
+    filtered = tasks.filter((t) => !t.completed);
+  if (appState.weeklyFilter === "completed")
+    filtered = tasks.filter((t) => t.completed);
+
+  const container = document.getElementById("weeklyListContainer");
+  if (!container) return;
+
+  if (filtered.length === 0) {
+    container.innerHTML = `
+      <div class="text-center py-12 bg-slate-50 dark:bg-neutral-900/40 rounded-2xl border border-dashed border-slate-300 dark:border-darkBorder">
+        <i class="fa-solid fa-calendar-plus text-3xl text-neonCyan mb-2"></i>
+        <p class="text-sm text-slate-500 dark:text-slate-400">No weekly targets in this view. Schedule your goals with a target date above!</p>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = filtered
+    .map((item) => {
+      const dateBadge = formatTargetDateBadge(item.targetDate, item.completed);
+      return `
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl border transition ${
+          item.completed
+            ? "bg-neonPurple/5 border-neonPurple/30"
+            : "bg-slate-50 dark:bg-neutral-900/90 border-slate-200 dark:border-darkBorder hover:border-neonPurple/50"
+        }">
+          <div class="flex items-start sm:items-center gap-3.5 flex-1 min-w-0 cursor-pointer" onclick="toggleWeeklyTaskComplete('${item.id}')">
+            <button type="button" class="mt-0.5 sm:mt-0 w-7 h-7 rounded-xl flex items-center justify-center transition flex-shrink-0 ${
+              item.completed
+                ? "bg-neonPurple text-black neon-glow-green"
+                : "bg-white dark:bg-black border-2 border-slate-300 dark:border-neutral-700 hover:border-neonPurple"
+            }">
+              ${item.completed ? '<i class="fa-solid fa-check text-sm font-bold"></i>' : ""}
+            </button>
+            <div class="min-w-0 flex-1">
+              <p class="text-sm sm:text-base font-medium break-words transition ${
+                item.completed
+                  ? "strikethrough-animated text-slate-400 dark:text-slate-500"
+                  : "text-slate-900 dark:text-slate-100"
+              }">
+                ${escapeHtml(item.text)}
+              </p>
+              <div class="flex flex-wrap items-center gap-2 mt-1.5">
+                <span class="px-2.5 py-0.5 rounded-md text-[11px] font-semibold ${dateBadge.badgeClass}">
+                  ${dateBadge.label}
+                </span>
+                <span class="px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-slate-200 dark:bg-neutral-800 text-neonCyan">
+                  ${escapeHtml(item.tag)}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-end gap-2 flex-shrink-0">
+            ${item.completed ? '<span class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-neonPurple/20 text-neonPurple">✓ Achieved</span>' : ""}
+            <button onclick="deleteWeeklyTask('${item.id}')" class="w-9 h-9 rounded-xl bg-neutral-800 hover:bg-electricYellow text-slate-400 hover:text-black transition flex items-center justify-center" title="Delete Target">
+              <i class="fa-solid fa-trash-can text-xs"></i>
+            </button>
+          </div>
+        </div>
+      `;
+    })
+    .join("");
 }
