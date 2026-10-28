@@ -59,3 +59,18 @@ body {
 .neon-glow-green {
   box-shadow: 0 0 16px -3px rgba(0, 255, 102, 0.5);
 }
+/* Fix date input calendar icon color in dark mode */
+.dark input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) brightness(1.5) sepia(1) hue-rotate(70deg) saturate(5) !important;
+  cursor: pointer;
+}
+/* Fix icon and badge visibility inside active Neon Green navbar tab */
+.nav-tab.bg-neonPurple i {
+  color: #050505 !important;
+}
+
+.nav-tab.bg-neonPurple span[id^="nav"] {
+  background-color: #050505 !important;
+  color: #00ff66 !important;
+  font-weight: 800 !important;
+}
