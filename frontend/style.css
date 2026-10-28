@@ -74,3 +74,17 @@ body {
   color: #00ff66 !important;
   font-weight: 800 !important;
 }
+/* Clear & Readable Completed Text with Neon Green Strikethrough */
+.strikethrough-animated {
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+  text-decoration-color: #00ff66;
+  opacity: 0.92 !important;
+  color: #cbd5e1 !important; /* Dark mode mein crisp light-silver text */
+}
+
+/* Light mode ke liye readable dark-slate text */
+html:not(.dark) .strikethrough-animated {
+  color: #334155 !important;
+  opacity: 0.9 !important;
+}
