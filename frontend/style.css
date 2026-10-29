@@ -87,4 +87,92 @@ body {
 html:not(.dark) .strikethrough-animated {
   color: #334155 !important;
   opacity: 0.9 !important;
+} /* ============================================================================
+   SUBJECT PROGRESS TRACKER — HORIZONTAL SUBJECT SLIDER
+   + VERTICAL ADD UNIT / ADD TOPIC FORMS + SHAKE-FREE SCROLLING
+   ============================================================================ */
+
+/* 1) Horizontal snap slider for subject cards */
+#subjectsGridContainer {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  gap: 1rem !important;
+  padding: 0.25rem 0 0.9rem 0 !important;
+  margin-top: 1.5rem !important;
+
+  /* Smooth, shake-free touch scrolling */
+  scroll-snap-type: x proximity; /* proximity > mandatory = no jitter */
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain; /* parent scroll को interfere मत करने दो */
+  touch-action: pan-x pan-y; /* horizontal swipe native */
+  scrollbar-width: thin;
+}
+
+/* Fixed-width cards — drag के दौरान width बदलेगी नहीं, इसलिए distortion नहीं */
+#subjectsGridContainer > div {
+  flex: 0 0 320px !important;
+  min-width: 320px !important;
+  max-width: 320px !important;
+  scroll-snap-align: start;
+  transform: translateZ(0); /* GPU layer */
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  contain: layout paint; /* reflow को card के अंदर ही रखो */
+}
+
+/* Empty state full-width child */
+#subjectsGridContainer > div.col-span-full {
+  flex: 1 1 100% !important;
+  min-width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* Phone पर narrower cards — native gallery feel */
+@media (max-width: 640px) {
+  #subjectsGridContainer > div {
+    flex: 0 0 86vw !important;
+    min-width: 86vw !important;
+    max-width: 86vw !important;
+  }
+}
+
+/* 2) All forms inside the active subject workspace stack vertically */
+#activeSubjectWorkspace form {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  flex-wrap: nowrap !important;
+  gap: 0.75rem !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+}
+
+#activeSubjectWorkspace form input,
+#activeSubjectWorkspace form button,
+#activeSubjectWorkspace form select,
+#activeSubjectWorkspace form textarea {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* 3) Workspace header कभी overflow न करे */
+#activeSubjectWorkspace > div {
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
+#activeSubjectWorkspace > div > * {
+  min-width: 0 !important;
+}
+
+/* 4) Unit tabs wrapping (जैसा तुमने रखा था) */
+#activeSubjectWorkspace .overflow-x-auto {
+  flex-wrap: wrap !important;
+  overflow-x: visible !important;
 }
