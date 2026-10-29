@@ -25,7 +25,7 @@ body {
   background-attachment: fixed;
 }
 
-/* Custom Scrollbar */
+/* Custom Scrollbar (global — units tabs, resources, etc.) */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -90,11 +90,10 @@ html:not(.dark) .strikethrough-animated {
 }
 
 /* ============================================================================
-   SUBJECT PROGRESS TRACKER — HORIZONTAL SUBJECT SLIDER (ALL SCREENS)
-   Forms ki vertical stacking sirf mobile pe (niche @media mein).
+   SUBJECT PROGRESS TRACKER — HORIZONTAL SLIDER (all screens)
    ============================================================================ */
 
-/* 1) Subject cards ek row mein, horizontal scroll slider (desktop + mobile) */
+/* 1) Subject cards — horizontal scroll slider */
 #subjectsGridContainer {
   display: flex !important;
   flex-direction: row !important;
@@ -108,10 +107,33 @@ html:not(.dark) .strikethrough-animated {
   scroll-snap-type: x proximity;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-x: contain;
-  scrollbar-width: thin;
 }
 
-/* Fixed-width cards — drag ke dauraan width nahi badlegi, distortion nahi */
+/* 2) Same dark + green-on-hover scrollbar as Units tabs */
+#subjectsGridContainer::-webkit-scrollbar {
+  height: 6px;
+}
+#subjectsGridContainer::-webkit-scrollbar-track {
+  background: #050505;
+  border-radius: 9999px;
+}
+#subjectsGridContainer::-webkit-scrollbar-thumb {
+  background: #1a1f26;
+  border-radius: 9999px;
+}
+#subjectsGridContainer::-webkit-scrollbar-thumb:hover {
+  background: #00ff66;
+}
+
+/* Firefox-only fallback (Chrome uses webkit pseudo-elements above) */
+@supports not selector(::-webkit-scrollbar) {
+  #subjectsGridContainer {
+    scrollbar-width: thin;
+    scrollbar-color: #1a1f26 #050505;
+  }
+}
+
+/* 3) Fixed-width cards — drag ke dauraan distortion nahi */
 #subjectsGridContainer > div {
   flex: 0 0 340px !important;
   min-width: 340px !important;
