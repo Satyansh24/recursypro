@@ -11,6 +11,7 @@ const TrackerDataSchema = new mongoose.Schema({
   subjects: { type: Array, default: [] },
   weakAreas: { type: Array, default: [] },
   weeklyTasks: { type: Array, default: [] },
+  resources: { type: Array, default: [] },
   updatedAt: { type: Date, default: Date.now },
 });
 

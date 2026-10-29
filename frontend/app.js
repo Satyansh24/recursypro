@@ -9,7 +9,10 @@ let appState = {
   user: null, // { userId, name, email }
   activeSection: "dashboard",
   todoFilter: "all",
+  activeResourceType: "link", // 'link' | 'image' | 'video' | 'document'
+  activeResourceCategory: "ALL",
   weeklyFilter: "all",
+
   selectedSubjectId: null,
   selectedUnitId: null,
   collapsedTopics: {},
@@ -17,6 +20,7 @@ let appState = {
     todos: [],
     subjects: [],
     weakAreas: [],
+    resources: [],
     weeklyTasks: [],
   },
 };
@@ -264,7 +268,20 @@ function normalizeTrackerData(raw) {
     completed: !!wt.completed,
     createdAt: wt.createdAt || Date.now(),
   }));
-  return { todos, subjects, weakAreas, weeklyTasks };
+  const resources = (Array.isArray(raw.resources) ? raw.resources : []).map(
+    (r) => ({
+      id: r.id || "res_" + Date.now() + Math.random(),
+      type: r.type || "link", // link, image, video, document
+      category: (r.category || "General").trim(),
+      tag: (r.tag || "Untitled Resource").trim(),
+      url: r.url || "",
+      fileName: r.fileName || "",
+      mimeType: r.mimeType || "",
+      sizeBytes: Number(r.sizeBytes) || 0,
+      createdAt: r.createdAt || Date.now(),
+    }),
+  );
+  return { todos, subjects, weakAreas, weeklyTasks, resources };
 }
 
 // --- Toast Notification Helper (Unified 3-Color Palette) ---
@@ -551,7 +568,14 @@ window.toggleTheme = function () {
 // --- Section Navigation Switcher ---
 window.switchSection = function (sectionName) {
   appState.activeSection = sectionName;
-  const sections = ["dashboard", "todo", "subjects", "weekly", "weak"];
+  const sections = [
+    "dashboard",
+    "todo",
+    "subjects",
+    "weekly",
+    "weak",
+    "resources",
+  ];
   sections.forEach((s) => {
     const el = document.getElementById("section-" + s);
     const navBtn = document.getElementById("nav-" + s);
@@ -1068,6 +1092,10 @@ function renderAll() {
   if (navWeeklyBadge) navWeeklyBadge.textContent = pendingWeekly;
   renderWeeklySection();
   renderWeakSection(metrics);
+  const totalRes = (appState.data.resources || []).length;
+  const navResBadge = document.getElementById("navResourcesBadge");
+  if (navResBadge) navResBadge.textContent = totalRes;
+  renderResourcesSection();
 }
 
 function renderDashboardSection(metrics) {
@@ -1859,4 +1887,506 @@ function renderWeeklySection() {
       `;
     })
     .join("");
+}
+// ==================== FEATURE 5: MY RESOURCES VAULT ENGINE ====================
+// IndexedDB Vault for storing user-authenticated files (Images <= 2MB, Videos <= 500MB, Docs)
+const IDB_NAME = "RecursyResourcesVaultDB";
+const IDB_STORE = "files_store";
+
+function openVaultDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(IDB_STORE)) {
+        db.createObjectStore(IDB_STORE, { keyPath: "id" });
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function saveFileToVaultDB(id, fileBlob) {
+  const db = await openVaultDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, "readwrite");
+    const userId = appState.user?.userId || "guest";
+    tx.objectStore(IDB_STORE).put({ id: `${userId}_${id}`, blob: fileBlob });
+    tx.oncomplete = () => resolve(true);
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function getFileFromVaultDB(id) {
+  const db = await openVaultDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, "readonly");
+    const userId = appState.user?.userId || "guest";
+    const req = tx.objectStore(IDB_STORE).get(`${userId}_${id}`);
+    req.onsuccess = () => resolve(req.result ? req.result.blob : null);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function deleteFileFromVaultDB(id) {
+  const db = await openVaultDB();
+  return new Promise((resolve) => {
+    const tx = db.transaction(IDB_STORE, "readwrite");
+    const userId = appState.user?.userId || "guest";
+    tx.objectStore(IDB_STORE).delete(`${userId}_${id}`);
+    tx.oncomplete = () => resolve(true);
+  });
+}
+
+// Strict File Type Validators
+function validateResourceFile(file, type) {
+  if (!file) return { valid: false, error: "Please select a file to upload!" };
+  const name = file.name.toLowerCase();
+  const mime = (file.type || "").toLowerCase();
+
+  if (type === "image") {
+    const isImg =
+      mime.startsWith("image/") ||
+      /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/.test(name);
+    if (!isImg)
+      return {
+        valid: false,
+        error:
+          "Strict Filter: Only Image files (.jpg, .png, .webp, etc.) are allowed in Image Resources!",
+      };
+    const MAX_IMG = 2 * 1024 * 1024; // 2 MB
+    if (file.size > MAX_IMG) {
+      return {
+        valid: false,
+        error: `Image exceeds 2 MB limit! Selected file is ${(file.size / (1024 * 1024)).toFixed(2)} MB.`,
+      };
+    }
+  } else if (type === "video") {
+    const isVid =
+      mime.startsWith("video/") || /\.(mp4|mkv|webm|mov|avi|m4v)$/.test(name);
+    if (!isVid)
+      return {
+        valid: false,
+        error:
+          "Strict Filter: Only Video files (.mp4, .mkv, .webm, .mov) are allowed in Video Resources!",
+      };
+    const usedVideoBytes = (appState.data.resources || [])
+      .filter((r) => r.type === "video")
+      .reduce((sum, r) => sum + (Number(r.sizeBytes) || 0), 0);
+    const MAX_VID_TOTAL = 500 * 1024 * 1024; // 500 MB Total
+    if (usedVideoBytes + file.size > MAX_VID_TOTAL) {
+      const leftMB = Math.max(
+        0,
+        (MAX_VID_TOTAL - usedVideoBytes) / (1024 * 1024),
+      ).toFixed(1);
+      return {
+        valid: false,
+        error: `Video Storage Limit (500 MB) Reached! You only have ${leftMB} MB remaining.`,
+      };
+    }
+  } else if (type === "document") {
+    const isDoc =
+      mime === "application/pdf" ||
+      mime.includes("word") ||
+      mime.includes("presentation") ||
+      mime.includes("spreadsheet") ||
+      mime.startsWith("text/") ||
+      /\.(pdf|doc|docx|ppt|pptx|xls|xlsx|txt|csv|md)$/.test(name);
+    if (!isDoc) {
+      return {
+        valid: false,
+        error:
+          "Strict Filter: Only Document files (.pdf, .doc, .ppt, .txt, .xls) are allowed in Document Resources!",
+      };
+    }
+  }
+  return { valid: true };
+}
+
+window.switchResourceType = function (type) {
+  appState.activeResourceType = type;
+  appState.activeResourceCategory = "ALL";
+  renderResourcesSection();
+};
+
+window.selectResourceCategory = function (cat) {
+  appState.activeResourceCategory = cat;
+  renderResourcesSection();
+};
+
+window.handleAddResource = async function (e) {
+  e.preventDefault();
+  if (!appState.token) {
+    showToast("Authentication required! Please log in first.", "error");
+    return;
+  }
+
+  const type = appState.activeResourceType;
+  const catInput = document.getElementById("resCategoryInput");
+  const tagInput = document.getElementById("resTagInput");
+  const category = (catInput.value || "General").trim();
+  const tag = (tagInput.value || "").trim();
+  if (!category || !tag) return;
+
+  if (!Array.isArray(appState.data.resources)) appState.data.resources = [];
+  const newId = "res_" + Date.now();
+
+  if (type === "link") {
+    const urlInput = document.getElementById("resUrlInput");
+    let rawUrl = (urlInput.value || "").trim();
+    if (!rawUrl) return;
+    if (!/^https?:\/\//i.test(rawUrl)) rawUrl = "https://" + rawUrl;
+
+    appState.data.resources.unshift({
+      id: newId,
+      type: "link",
+      category,
+      tag,
+      url: rawUrl,
+      fileName: "",
+      mimeType: "text/uri-list",
+      sizeBytes: 0,
+      createdAt: Date.now(),
+    });
+    showToast(`Link "${tag}" saved under ${category}!`, "success");
+  } else {
+    const fileInput = document.getElementById("resFileInput");
+    const file = fileInput?.files?.[0];
+    const check = validateResourceFile(file, type);
+    if (!check.valid) {
+      showToast(check.error, "error");
+      return;
+    }
+
+    try {
+      await saveFileToVaultDB(newId, file);
+      appState.data.resources.unshift({
+        id: newId,
+        type,
+        category,
+        tag,
+        url: "",
+        fileName: file.name,
+        mimeType: file.type || "application/octet-stream",
+        sizeBytes: file.size,
+        createdAt: Date.now(),
+      });
+      showToast(
+        `${type.toUpperCase()} "${tag}" uploaded to ${category}!`,
+        "success",
+      );
+    } catch (err) {
+      console.error(err);
+      showToast("Failed to store file in browser vault.", "error");
+      return;
+    }
+  }
+
+  appState.activeResourceCategory = category;
+  await saveWorkspaceToCloud();
+};
+
+window.openResourceItem = async function (resId) {
+  const item = (appState.data.resources || []).find((r) => r.id === resId);
+  if (!item) return;
+
+  if (item.type === "link") {
+    window.open(item.url, "_blank", "noopener,noreferrer");
+    return;
+  }
+
+  const blob = await getFileFromVaultDB(item.id);
+  if (!blob) {
+    showToast(
+      "File data exists on the device where it was uploaded.",
+      "warning",
+    );
+    return;
+  }
+
+  const blobUrl = URL.createObjectURL(blob);
+  const modal = document.getElementById("resourcePreviewModal");
+  const body = document.getElementById("previewModalBody");
+  document.getElementById("previewModalCategory").textContent =
+    `${item.type.toUpperCase()} • ${item.category}`;
+  document.getElementById("previewModalTitle").textContent =
+    `${item.tag} (${item.fileName})`;
+
+  if (item.type === "image") {
+    body.innerHTML = `<img src="${blobUrl}" alt="${escapeHtml(item.tag)}" class="max-h-[65vh] rounded-xl object-contain" />`;
+  } else if (item.type === "video") {
+    body.innerHTML = `<video src="${blobUrl}" controls autoplay class="max-h-[65vh] w-full rounded-xl bg-black"></video>`;
+  } else {
+    body.innerHTML = `
+      <div class="w-full space-y-3 text-center py-6">
+        <iframe src="${blobUrl}" class="w-full h-[55vh] rounded-xl border border-darkBorder bg-white"></iframe>
+        <a href="${blobUrl}" download="${escapeHtml(item.fileName)}" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-neonPurple text-black font-bold text-xs">
+          <i class="fa-solid fa-download"></i> Download ${escapeHtml(item.fileName)}
+        </a>
+      </div>
+    `;
+  }
+
+  modal.classList.remove("hidden");
+  modal.classList.add("flex");
+};
+
+window.closeResourcePreview = function () {
+  const modal = document.getElementById("resourcePreviewModal");
+  const body = document.getElementById("previewModalBody");
+  body.innerHTML = "";
+  modal.classList.add("hidden");
+  modal.classList.remove("flex");
+};
+
+window.deleteResourceItem = function (resId) {
+  const item = (appState.data.resources || []).find((r) => r.id === resId);
+  if (!item) return;
+  askConfirmation(
+    "Delete Resource?",
+    `Remove "${item.tag}" from ${item.category}?`,
+    async () => {
+      if (item.type !== "link") await deleteFileFromVaultDB(resId);
+      appState.data.resources = (appState.data.resources || []).filter(
+        (r) => r.id !== resId,
+      );
+      showToast("Resource deleted.", "info");
+      await saveWorkspaceToCloud();
+    },
+  );
+};
+
+function formatBytesMB(bytes) {
+  if (!bytes) return "0 KB";
+  const mb = bytes / (1024 * 1024);
+  if (mb >= 0.1) return `${mb.toFixed(2)} MB`;
+  return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+}
+
+function renderResourcesSection() {
+  const workspace = document.getElementById("resourcesActiveWorkspace");
+  if (!workspace) return;
+
+  const allRes = appState.data.resources || [];
+  const activeType = appState.activeResourceType || "link";
+
+  // Counts & Video Storage Calculation (Max 500 MB)
+  const counts = {
+    link: allRes.filter((r) => r.type === "link").length,
+    image: allRes.filter((r) => r.type === "image").length,
+    video: allRes.filter((r) => r.type === "video").length,
+    document: allRes.filter((r) => r.type === "document").length,
+  };
+
+  document.getElementById("resCount-link").textContent = `${counts.link} Links`;
+  document.getElementById("resCount-image").textContent =
+    `${counts.image} Images (Max 2MB)`;
+  document.getElementById("resCount-video").textContent =
+    `${counts.video} Videos (Max 500MB)`;
+  document.getElementById("resCount-document").textContent =
+    `${counts.document} Docs`;
+
+  const usedVideoBytes = allRes
+    .filter((r) => r.type === "video")
+    .reduce((acc, r) => acc + (Number(r.sizeBytes) || 0), 0);
+  const usedVideoMB = (usedVideoBytes / (1024 * 1024)).toFixed(1);
+  const videoPct = Math.min(
+    100,
+    Math.round((usedVideoBytes / (500 * 1024 * 1024)) * 100),
+  );
+
+  document.getElementById("videoStorageText").textContent =
+    `${usedVideoMB} MB / 500 MB (${videoPct}%)`;
+  document.getElementById("videoStorageBar").style.width = `${videoPct}%`;
+
+  // Highlight Active Resource Type Card
+  ["link", "image", "video", "document"].forEach((t) => {
+    const btn = document.getElementById("resTab-" + t);
+    if (!btn) return;
+    if (t === activeType) {
+      btn.className =
+        "p-4 rounded-2xl border-2 text-left transition flex items-center gap-3 border-neonPurple bg-neonPurple/10 neon-glow-purple";
+    } else {
+      btn.className =
+        "p-4 rounded-2xl border-2 text-left transition flex items-center gap-3 border-slate-200 dark:border-darkBorder bg-slate-50 dark:bg-neutral-900/60 hover:border-neonPurple/40";
+    }
+  });
+
+  const typeItems = allRes.filter((r) => r.type === activeType);
+  const categories = [...new Set(typeItems.map((r) => r.category))];
+  if (
+    appState.activeResourceCategory !== "ALL" &&
+    !categories.includes(appState.activeResourceCategory)
+  ) {
+    appState.activeResourceCategory = "ALL";
+  }
+
+  const filteredItems =
+    appState.activeResourceCategory === "ALL"
+      ? typeItems
+      : typeItems.filter((r) => r.category === appState.activeResourceCategory);
+
+  const acceptAttr =
+    activeType === "image"
+      ? "image/*"
+      : activeType === "video"
+        ? "video/*"
+        : ".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.csv,.md";
+
+  const typeLabels = {
+    link: {
+      title: "Link Resources",
+      hint: "Paste YouTube playlist, coding sheet, or article URL",
+      icon: "fa-link",
+    },
+    image: {
+      title: "Image Resources (Strictly Images • Max 2 MB)",
+      hint: "Upload whiteboard photos, handwritten notes, diagrams",
+      icon: "fa-image",
+    },
+    video: {
+      title: "Video Resources (Strictly Videos • Max 500 MB Vault)",
+      hint: "Upload lecture clips or recorded explanations",
+      icon: "fa-film",
+    },
+    document: {
+      title: "Document Resources (Strictly PDF / DOC / PPT / TXT)",
+      hint: "Upload syllabus PDFs, assignments, or cheatsheets",
+      icon: "fa-file-pdf",
+    },
+  }[activeType];
+
+  workspace.innerHTML = `
+    <!-- Add Resource Form -->
+    <form onsubmit="handleAddResource(event)" class="bg-slate-50 dark:bg-neutral-900/80 p-5 rounded-2xl border border-slate-200 dark:border-darkBorder space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+          <i class="fa-solid ${typeLabels.icon} text-neonPurple"></i>
+          <span>Add to ${typeLabels.title}</span>
+        </h3>
+        <span class="text-[11px] text-slate-400">${typeLabels.hint}</span>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
+        <div class="md:col-span-3">
+          <label class="block text-[11px] font-semibold text-slate-400 mb-1">1. Category / Folder (e.g., DSA)</label>
+          <input type="text" id="resCategoryInput" list="existingResCategories" required placeholder="e.g., DSA, Calculus, Web Dev" class="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-black border border-slate-200 dark:border-darkBorder text-sm focus:outline-none focus:border-neonPurple" />
+          <datalist id="existingResCategories">
+            ${categories.map((c) => `<option value="${escapeHtml(c)}"></option>`).join("")}
+          </datalist>
+        </div>
+
+        <div class="md:col-span-4">
+          <label class="block text-[11px] font-semibold text-slate-400 mb-1">2. Resource Tag / Title (e.g., Love Babbar)</label>
+          <input type="text" id="resTagInput" required placeholder="e.g., Love Babbar Supreme Playlist" class="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-black border border-slate-200 dark:border-darkBorder text-sm focus:outline-none focus:border-neonCyan" />
+        </div>
+
+        <div class="md:col-span-3">
+          ${
+            activeType === "link"
+              ? `
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1">3. Paste URL / Link</label>
+              <input type="url" id="resUrlInput" required placeholder="https://youtube.com/playlist?list=..." class="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-black border border-slate-200 dark:border-darkBorder text-sm focus:outline-none focus:border-neonPurple" />
+            `
+              : `
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1">3. Select ${activeType.toUpperCase()} File</label>
+              <input type="file" id="resFileInput" accept="${acceptAttr}" required class="w-full px-3 py-2 rounded-xl bg-white dark:bg-black border border-slate-200 dark:border-darkBorder text-xs file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-neonPurple file:text-black file:font-bold cursor-pointer" />
+            `
+          }
+        </div>
+
+        <div class="md:col-span-2 flex items-end">
+          <button type="submit" class="w-full py-2.5 px-4 rounded-xl bg-neonPurple hover:opacity-90 text-black font-bold text-sm shadow-lg transition flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-plus"></i>
+            <span>Save</span>
+          </button>
+        </div>
+      </div>
+    </form>
+
+    <!-- Category Folder Filter Pills (e.g., ALL, DSA, Calculus...) -->
+    <div class="flex items-center gap-2 overflow-x-auto pb-2">
+      <button onclick="selectResourceCategory('ALL')" class="px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
+        appState.activeResourceCategory === "ALL"
+          ? "bg-neonPurple text-black shadow-md"
+          : "bg-slate-100 dark:bg-neutral-900 text-slate-400 hover:text-white border border-transparent dark:border-darkBorder"
+      }">
+        <i class="fa-solid fa-layer-group"></i>
+        <span>All Categories (${typeItems.length})</span>
+      </button>
+      ${categories
+        .map((cat) => {
+          const catCount = typeItems.filter((i) => i.category === cat).length;
+          const isActive = appState.activeResourceCategory === cat;
+          return `
+            <button onclick="selectResourceCategory('${escapeHtml(cat)}')" class="px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 whitespace-nowrap ${
+              isActive
+                ? "bg-neonCyan text-black shadow-md"
+                : "bg-slate-100 dark:bg-neutral-900 text-slate-300 hover:border-neonCyan/50 border border-transparent dark:border-darkBorder"
+            }">
+              <i class="fa-solid fa-folder"></i>
+              <span>${escapeHtml(cat)}</span>
+              <span class="px-1.5 py-0.2 rounded text-[10px] ${isActive ? "bg-black/20 text-black" : "bg-neutral-800 text-neonCyan"}">${catCount}</span>
+            </button>
+          `;
+        })
+        .join("")}
+    </div>
+
+    <!-- Resources Cards Grid -->
+    ${
+      filteredItems.length === 0
+        ? `
+        <div class="text-center py-12 bg-slate-50 dark:bg-neutral-900/40 rounded-2xl border border-dashed border-slate-300 dark:border-darkBorder">
+          <i class="fa-solid ${typeLabels.icon} text-3xl text-slate-500 mb-2"></i>
+          <p class="text-sm text-slate-400">No ${activeType} resources saved in this category yet. Add your first resource above!</p>
+        </div>
+      `
+        : `
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          ${filteredItems
+            .map(
+              (item) => `
+            <div onclick="openResourceItem('${item.id}')" class="cursor-pointer group p-5 rounded-2xl bg-slate-50 dark:bg-neutral-900/90 border border-slate-200 dark:border-darkBorder hover:border-neonPurple transition flex flex-col justify-between gap-4">
+              <div>
+                <div class="flex items-center justify-between gap-2">
+                  <span class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-neonCyan/15 text-neonCyan border border-neonCyan/30 flex items-center gap-1.5">
+                    <i class="fa-solid fa-folder-open text-[10px]"></i>
+                    ${escapeHtml(item.category)}
+                  </span>
+                  <button onclick="event.stopPropagation(); deleteResourceItem('${item.id}')" class="w-8 h-8 rounded-lg text-slate-400 hover:text-electricYellow hover:bg-electricYellow/10 flex items-center justify-center transition" title="Delete Resource">
+                    <i class="fa-solid fa-trash-can text-xs"></i>
+                  </button>
+                </div>
+
+                <!-- Tag / Title Highlight -->
+                <h4 class="text-base font-bold text-slate-900 dark:text-white mt-3 group-hover:text-neonPurple transition flex items-center gap-2">
+                  <i class="fa-solid fa-tag text-neonPurple text-xs"></i>
+                  <span>${escapeHtml(item.tag)}</span>
+                </h4>
+
+                <p class="text-xs text-slate-400 mt-1.5 truncate">
+                  ${item.type === "link" ? escapeHtml(item.url) : `<i class="fa-regular fa-file mr-1"></i> ${escapeHtml(item.fileName)} (${formatBytesMB(item.sizeBytes)})`}
+                </p>
+              </div>
+
+              <div class="pt-3 border-t border-slate-200 dark:border-darkBorder flex items-center justify-between text-xs font-bold">
+                <span class="text-neonPurple flex items-center gap-1.5">
+                  ${
+                    item.type === "link"
+                      ? '<i class="fa-solid fa-arrow-up-right-from-square"></i> Visit Link directly'
+                      : '<i class="fa-solid fa-eye"></i> Click to Preview / Download'
+                  }
+                </span>
+                <span class="text-[10px] text-slate-500">${new Date(item.createdAt).toLocaleDateString()}</span>
+              </div>
+            </div>
+          `,
+            )
+            .join("")}
+        </div>
+      `
+    }
+  `;
 }

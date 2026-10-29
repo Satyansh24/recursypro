@@ -295,8 +295,8 @@
               <i class="fa-solid fa-arrow-right"></i>
             </button>
           </form>
-
-          <div class="my-5 flex items-center gap-3">
+          <!-- inko delete krna hai yha se  -->
+          <!-- <div class="my-5 flex items-center gap-3">
             <div class="h-px bg-slate-200 dark:bg-darkBorder flex-1"></div>
             <span class="text-xs text-slate-400">OR TEST INSTANTLY</span>
             <div class="h-px bg-slate-200 dark:bg-darkBorder flex-1"></div>
@@ -310,7 +310,9 @@
             <span
               >1-Click Instant Preview (Pre-loaded Calculus & DSA Sample)</span
             >
-          </button>
+          </button> -->
+
+          <!-- yha tk  -->
         </div>
       </div>
     </div>
@@ -400,6 +402,19 @@
               <span>Weekly Planner</span>
               <span
                 id="navWeeklyBadge"
+                class="px-1.5 py-0.2 rounded-full text-[10px] bg-neonCyan/20 text-neonCyan"
+                >0</span
+              >
+            </button>
+            <button
+              onclick="switchSection('resources')"
+              id="nav-resources"
+              class="nav-tab px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition flex items-center gap-2 whitespace-nowrap text-slate-600 dark:text-slate-300 hover:text-neonPurple"
+            >
+              <i class="fa-solid fa-folder-tree text-neonCyan"></i>
+              <span>My Resources</span>
+              <span
+                id="navResourcesBadge"
                 class="px-1.5 py-0.2 rounded-full text-[10px] bg-neonCyan/20 text-neonCyan"
                 >0</span
               >
@@ -1108,7 +1123,185 @@
             <div id="weeklyListContainer" class="mt-4 space-y-2.5"></div>
           </div>
         </section>
+        <!-- ==================== 5. MY RESOURCES SECTION ==================== -->
+        <section id="section-resources" class="hidden space-y-6">
+          <div
+            class="bg-white dark:bg-darkCard rounded-3xl border border-slate-200 dark:border-darkBorder p-6 sm:p-8 shadow-sm space-y-6"
+          >
+            <!-- Top Header & Video Storage Meter -->
+            <div
+              class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b border-slate-200 dark:border-darkBorder"
+            >
+              <div>
+                <span
+                  class="text-xs font-bold uppercase tracking-wider text-neonCyan"
+                  >Feature 05 • Personal Study Vault</span
+                >
+                <h1 class="text-2xl font-bold mt-1 flex items-center gap-2">
+                  <i class="fa-solid fa-box-archive text-neonPurple"></i>
+                  <span>My Study Resources</span>
+                </h1>
+                <p
+                  class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1"
+                >
+                  Organize your links, class snapshots, videos, and PDFs by
+                  <strong>Category</strong> &rarr; <strong>Tag</strong>.
+                  (Images: Max 2 MB/file • Videos: Max 500 MB total)
+                </p>
+              </div>
 
+              <!-- Video Storage Limit Meter (Max 500 MB) -->
+              <div
+                class="bg-slate-100 dark:bg-neutral-900 border border-transparent dark:border-darkBorder rounded-2xl p-4 min-w-[270px]"
+              >
+                <div class="flex items-center justify-between text-xs">
+                  <span class="font-semibold text-slate-500 dark:text-slate-400"
+                    ><i class="fa-solid fa-hard-drive text-neonCyan mr-1"></i>
+                    Video Vault Storage</span
+                  >
+                  <span
+                    id="videoStorageText"
+                    class="font-extrabold text-neonPurple"
+                    >0 MB / 500 MB</span
+                  >
+                </div>
+                <div
+                  class="w-full h-2 bg-slate-200 dark:bg-neutral-800 rounded-full overflow-hidden mt-2"
+                >
+                  <div
+                    id="videoStorageBar"
+                    class="h-full bg-gradient-to-r from-neonPurple to-electricYellow transition-all duration-300"
+                    style="width: 0%"
+                  ></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 4 Resource Type Selector Tabs -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <button
+                onclick="switchResourceType('link')"
+                id="resTab-link"
+                class="p-4 rounded-2xl border-2 text-left transition flex items-center gap-3 border-neonPurple bg-neonPurple/10"
+              >
+                <div
+                  class="w-10 h-10 rounded-xl bg-neonPurple text-black flex items-center justify-center text-lg font-bold"
+                >
+                  <i class="fa-solid fa-link"></i>
+                </div>
+                <div>
+                  <h3 class="text-sm font-bold text-slate-900 dark:text-white">
+                    Link Resources
+                  </h3>
+                  <p id="resCount-link" class="text-[11px] text-neonCyan">
+                    0 Links
+                  </p>
+                </div>
+              </button>
+
+              <button
+                onclick="switchResourceType('image')"
+                id="resTab-image"
+                class="p-4 rounded-2xl border-2 text-left transition flex items-center gap-3 border-slate-200 dark:border-darkBorder bg-slate-50 dark:bg-neutral-900/60"
+              >
+                <div
+                  class="w-10 h-10 rounded-xl bg-neonCyan/15 text-neonCyan flex items-center justify-center text-lg font-bold"
+                >
+                  <i class="fa-solid fa-image"></i>
+                </div>
+                <div>
+                  <h3 class="text-sm font-bold text-slate-900 dark:text-white">
+                    Image Resources
+                  </h3>
+                  <p id="resCount-image" class="text-[11px] text-slate-400">
+                    0 Images (Max 2MB)
+                  </p>
+                </div>
+              </button>
+
+              <button
+                onclick="switchResourceType('video')"
+                id="resTab-video"
+                class="p-4 rounded-2xl border-2 text-left transition flex items-center gap-3 border-slate-200 dark:border-darkBorder bg-slate-50 dark:bg-neutral-900/60"
+              >
+                <div
+                  class="w-10 h-10 rounded-xl bg-electricYellow/15 text-electricYellow flex items-center justify-center text-lg font-bold"
+                >
+                  <i class="fa-solid fa-film"></i>
+                </div>
+                <div>
+                  <h3 class="text-sm font-bold text-slate-900 dark:text-white">
+                    Video Resources
+                  </h3>
+                  <p id="resCount-video" class="text-[11px] text-slate-400">
+                    0 Videos (Max 500MB)
+                  </p>
+                </div>
+              </button>
+
+              <button
+                onclick="switchResourceType('document')"
+                id="resTab-document"
+                class="p-4 rounded-2xl border-2 text-left transition flex items-center gap-3 border-slate-200 dark:border-darkBorder bg-slate-50 dark:bg-neutral-900/60"
+              >
+                <div
+                  class="w-10 h-10 rounded-xl bg-neonPurple/15 text-neonPurple flex items-center justify-center text-lg font-bold"
+                >
+                  <i class="fa-solid fa-file-pdf"></i>
+                </div>
+                <div>
+                  <h3 class="text-sm font-bold text-slate-900 dark:text-white">
+                    Document Resources
+                  </h3>
+                  <p id="resCount-document" class="text-[11px] text-slate-400">
+                    0 Docs (PDF/PPT/DOC)
+                  </p>
+                </div>
+              </button>
+            </div>
+
+            <!-- Dynamic Add Form + Category Pills + Resource Items Grid -->
+            <div id="resourcesActiveWorkspace" class="space-y-6"></div>
+          </div>
+        </section>
+
+        <!-- Preview Modal for Images, Videos & PDFs -->
+        <div
+          id="resourcePreviewModal"
+          class="fixed inset-0 z-50 hidden items-center justify-center bg-black/85 backdrop-blur-md p-4"
+        >
+          <div
+            class="bg-white dark:bg-darkCard border border-slate-200 dark:border-darkBorder rounded-3xl max-w-4xl w-full p-6 shadow-2xl space-y-4"
+          >
+            <div
+              class="flex items-center justify-between border-b border-slate-200 dark:border-darkBorder pb-3"
+            >
+              <div>
+                <span
+                  id="previewModalCategory"
+                  class="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-neonPurple/20 text-neonPurple"
+                  >Category</span
+                >
+                <h3
+                  id="previewModalTitle"
+                  class="text-lg font-bold text-slate-900 dark:text-white mt-1"
+                >
+                  Resource Preview
+                </h3>
+              </div>
+              <button
+                onclick="closeResourcePreview()"
+                class="w-9 h-9 rounded-xl bg-neutral-800 text-slate-300 hover:bg-electricYellow hover:text-black flex items-center justify-center"
+              >
+                <i class="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+            <div
+              id="previewModalBody"
+              class="flex items-center justify-center max-h-[70vh] overflow-auto rounded-2xl bg-black p-2"
+            ></div>
+          </div>
+        </div>
         <!-- ==================== 4. WEAK AREAS SECTION ==================== -->
         <section id="section-weak" class="hidden space-y-6">
           <div

@@ -315,10 +315,17 @@ app.get("/api/data", authMiddleware, async (req, res) => {
 
 app.post("/api/data", authMiddleware, async (req, res) => {
   try {
-    const { todos, subjects, weakAreas, weeklyTasks } = req.body;
+    const { todos, subjects, weakAreas, weeklyTasks, resources } = req.body;
     const tracker = await TrackerData.findOneAndUpdate(
       { userId: req.user.userId },
-      { todos, subjects, weakAreas, weeklyTasks, updatedAt: Date.now() },
+      {
+        todos,
+        subjects,
+        weakAreas,
+        weeklyTasks,
+        resources,
+        updatedAt: Date.now(),
+      },
       { new: true, upsert: true },
     );
     res.json({ success: true, tracker });
