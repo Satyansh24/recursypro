@@ -1367,7 +1367,8 @@ function renderSubjectsSection() {
 
   workspace.innerHTML = `
         <!-- Subject Window Header -->
-        <div class="flex flex-col gap-4 pb-6 border-b border-slate-200 dark:border-darkBorder">
+               <!-- Subject Window Header -->
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b border-slate-200 dark:border-darkBorder">
             <div>
                 <div class="flex items-center gap-2 flex-wrap">
                     <span class="px-2.5 py-1 rounded-lg bg-neonPurple text-black text-xs font-bold">ACTIVE SUBJECT WINDOW</span>
@@ -1376,10 +1377,10 @@ function renderSubjectsSection() {
                 <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white mt-2">${escapeHtml(activeSubj.name)}</h2>
             </div>
 
-            <!-- Add Unit Form (VERTICAL: input ऊपर, button नीचे) -->
-            <form onsubmit="handleAddUnit(event, '${activeSubj.id}')" class="flex flex-col gap-2 w-full sm:max-w-md">
-                <input type="text" id="newUnitNameInput" required placeholder="Add new unit (e.g., Unit 2)" class="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-neutral-900 border border-slate-200 dark:border-darkBorder text-sm focus:outline-none focus:border-neonCyan">
-                <button type="submit" class="w-full px-4 py-2.5 rounded-xl bg-neonCyan hover:opacity-90 text-black font-bold text-sm transition flex items-center justify-center gap-1.5 shadow-md">
+            <!-- Add Unit Form -->
+            <form onsubmit="handleAddUnit(event, '${activeSubj.id}')" class="flex gap-2">
+                <input type="text" id="newUnitNameInput" required placeholder="Add new unit (e.g., Unit 2)" class="px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-neutral-900 border border-slate-200 dark:border-darkBorder text-sm focus:outline-none focus:border-neonCyan">
+                <button type="submit" class="px-4 py-2.5 rounded-xl bg-neonCyan hover:opacity-90 text-black font-bold text-xs sm:text-sm transition flex items-center gap-1.5 whitespace-nowrap shadow-md">
                     <i class="fa-solid fa-plus"></i>
                     <span>Add Unit</span>
                 </button>
@@ -1423,7 +1424,8 @@ function renderSubjectsSection() {
             : `
             <div class="space-y-6">
                 <!-- Add Chapter/Topic Form (VERTICAL: input ऊपर, button नीचे) -->
-                <div class="bg-slate-50 dark:bg-neutral-900/90 p-4 rounded-2xl border border-slate-200 dark:border-darkBorder flex flex-col gap-3">
+                                <!-- Add Chapter/Topic Form -->
+                <div class="bg-slate-50 dark:bg-neutral-900/90 p-4 rounded-2xl border border-slate-200 dark:border-darkBorder flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
                     <div>
                         <h3 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                             <i class="fa-solid fa-bookmark text-neonCyan"></i>
@@ -1431,14 +1433,13 @@ function renderSubjectsSection() {
                         </h3>
                         <p class="text-xs text-slate-500 dark:text-slate-400">Add chapters/topics below, list practice questions inside each topic, and increment revisions (+1)</p>
                     </div>
-                    <form onsubmit="handleAddTopic(event, '${activeSubj.id}', '${activeUnit.id}')" class="flex flex-col gap-2 w-full sm:max-w-md">
-                        <input type="text" id="newTopicNameInput" required placeholder="Add new chapter or topic..." class="w-full px-3.5 py-2 rounded-xl bg-white dark:bg-black border border-slate-200 dark:border-darkBorder text-sm focus:outline-none focus:border-neonPurple">
-                        <button type="submit" class="w-full px-4 py-2 rounded-xl bg-neonPurple hover:opacity-90 text-black font-bold text-sm transition">
+                    <form onsubmit="handleAddTopic(event, '${activeSubj.id}', '${activeUnit.id}')" class="flex gap-2 min-w-[280px] sm:min-w-[360px]">
+                        <input type="text" id="newTopicNameInput" required placeholder="Add new chapter or topic..." class="flex-1 px-3.5 py-2 rounded-xl bg-white dark:bg-black border border-slate-200 dark:border-darkBorder text-sm focus:outline-none focus:border-neonPurple">
+                        <button type="submit" class="px-4 py-2 rounded-xl bg-neonPurple hover:opacity-90 text-black font-bold text-xs sm:text-sm transition whitespace-nowrap">
                             + Add Topic
                         </button>
                     </form>
                 </div>
-
                 <!-- Topics List -->
                 <div class="space-y-4">
                     ${
