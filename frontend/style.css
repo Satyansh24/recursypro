@@ -90,49 +90,57 @@ html:not(.dark) .strikethrough-animated {
 }
 
 /* ============================================================================
-   SUBJECT PROGRESS TRACKER — MOBILE-ONLY ENHANCEMENTS
-   Desktop / laptop pe kuch bhi change nahi hoga.
-   Sirf screen width < 640px (mobile) pe ye rules apply honge.
+   SUBJECT PROGRESS TRACKER — HORIZONTAL SUBJECT SLIDER (ALL SCREENS)
+   Forms ki vertical stacking sirf mobile pe (niche @media mein).
+   ============================================================================ */
+
+/* 1) Subject cards ek row mein, horizontal scroll slider (desktop + mobile) */
+#subjectsGridContainer {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  gap: 1rem !important;
+  padding: 0.25rem 0 0.9rem 0 !important;
+
+  /* Smooth, shake-free scrolling */
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+}
+
+/* Fixed-width cards — drag ke dauraan width nahi badlegi, distortion nahi */
+#subjectsGridContainer > div {
+  flex: 0 0 340px !important;
+  min-width: 340px !important;
+  max-width: 340px !important;
+  scroll-snap-align: start;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  contain: layout paint;
+}
+
+/* Empty-state child full width */
+#subjectsGridContainer > div.col-span-full {
+  flex: 1 1 100% !important;
+  min-width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* ============================================================================
+   MOBILE-ONLY (< 640px): narrower cards + vertical Add Unit / Add Topic forms
    ============================================================================ */
 @media (max-width: 639.98px) {
-  /* 1) Subjects → horizontal gallery slider */
-  #subjectsGridContainer {
-    display: flex !important;
-    flex-direction: row !important;
-    flex-wrap: nowrap !important;
-    overflow-x: auto !important;
-    overflow-y: hidden !important;
-    gap: 1rem !important;
-    padding: 0.25rem 0 0.9rem 0 !important;
-
-    /* Smooth, shake-free touch scrolling */
-    scroll-snap-type: x proximity;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior-x: contain;
-    touch-action: pan-x pan-y;
-    scrollbar-width: thin;
-  }
-
-  /* Fixed-width cards — drag ke dauraan width nahi badlegi */
   #subjectsGridContainer > div {
     flex: 0 0 86vw !important;
     min-width: 86vw !important;
     max-width: 86vw !important;
-    scroll-snap-align: start;
-    transform: translateZ(0);
-    backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;
-    contain: layout paint;
   }
 
-  /* Empty-state child full width */
-  #subjectsGridContainer > div.col-span-full {
-    flex: 1 1 100% !important;
-    min-width: 100% !important;
-    max-width: 100% !important;
-  }
-
-  /* 2) Forms inside active subject workspace → vertical stack */
+  /* All forms inside active subject workspace → vertical stack */
   #activeSubjectWorkspace form {
     display: flex !important;
     flex-direction: column !important;
@@ -154,7 +162,7 @@ html:not(.dark) .strikethrough-animated {
     box-sizing: border-box !important;
   }
 
-  /* 3) Unit tabs wrapping mobile pe */
+  /* Unit tabs wrapping mobile pe */
   #activeSubjectWorkspace .overflow-x-auto {
     flex-wrap: wrap !important;
     overflow-x: visible !important;
