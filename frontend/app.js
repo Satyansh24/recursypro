@@ -1942,8 +1942,7 @@ function renderWeeklySection() {
     })
     .join("");
 }
-// ==================== FEATURE 5: MY RESOURCES VAULT ENGINE ====================
-// IndexedDB Vault for storing user-authenticated files (Images <= 2MB, Videos <= 500MB, Docs)
+// ==================== FEATURE 5: MY RESOURCES VAULT ENGINE (CLOUD SYNC + CATEGORY SELECTOR) ====================
 const IDB_NAME = "RecursyResourcesVaultDB";
 const IDB_STORE = "files_store";
 
@@ -1990,6 +1989,16 @@ async function deleteFileFromVaultDB(id) {
     const userId = appState.user?.userId || "guest";
     tx.objectStore(IDB_STORE).delete(`${userId}_${id}`);
     tx.oncomplete = () => resolve(true);
+  });
+}
+
+// Helper: Convert File to Base64 DataURL so it syncs to MongoDB Cloud across all devices
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = (err) => reject(err);
+    reader.readAsDataURL(file);
   });
 }
 
@@ -2054,6 +2063,13 @@ function validateResourceFile(file, type) {
           "Strict Filter: Only Document files (.pdf, .doc, .ppt, .txt, .xls) are allowed in Document Resources!",
       };
     }
+    const MAX_DOC = 10 * 1024 * 1024; // 10 MB per doc for smooth cloud sync
+    if (file.size > MAX_DOC) {
+      return {
+        valid: false,
+        error: `Document exceeds 10 MB cloud sync limit! Selected file is ${(file.size / (1024 * 1024)).toFixed(2)} MB.`,
+      };
+    }
   }
   return { valid: true };
 }
@@ -2069,6 +2085,20 @@ window.selectResourceCategory = function (cat) {
   renderResourcesSection();
 };
 
+// Toggle between selecting an existing category or typing a new one
+window.handleCategoryDropdownChange = function (selectEl) {
+  const customInput = document.getElementById("resCategoryCustomInput");
+  if (!customInput) return;
+  if (selectEl.value === "__NEW__") {
+    customInput.classList.remove("hidden");
+    customInput.required = true;
+    customInput.focus();
+  } else {
+    customInput.classList.add("hidden");
+    customInput.required = false;
+  }
+};
+
 window.handleAddResource = async function (e) {
   e.preventDefault();
   if (!appState.token) {
@@ -2077,11 +2107,20 @@ window.handleAddResource = async function (e) {
   }
 
   const type = appState.activeResourceType;
-  const catInput = document.getElementById("resCategoryInput");
+  const selectEl = document.getElementById("resCategorySelect");
+  const customInput = document.getElementById("resCategoryCustomInput");
   const tagInput = document.getElementById("resTagInput");
-  const category = (catInput.value || "General").trim();
+
+  let category = "";
+  if (selectEl && selectEl.value !== "__NEW__") {
+    category = selectEl.value.trim();
+  } else if (customInput) {
+    category = customInput.value.trim();
+  }
+  if (!category) category = "General";
+
   const tag = (tagInput.value || "").trim();
-  if (!category || !tag) return;
+  if (!tag) return;
 
   if (!Array.isArray(appState.data.resources)) appState.data.resources = [];
   const newId = "res_" + Date.now();
@@ -2101,9 +2140,12 @@ window.handleAddResource = async function (e) {
       fileName: "",
       mimeType: "text/uri-list",
       sizeBytes: 0,
+      fileData: "",
       createdAt: Date.now(),
     });
-    showToast(`Link "${tag}" saved under ${category}!`, "success");
+    showToast(`Link "${tag}" saved in "${category}"!`, "success");
+    appState.activeResourceCategory = category;
+    await saveWorkspaceToCloud();
   } else {
     const fileInput = document.getElementById("resFileInput");
     const file = fileInput?.files?.[0];
@@ -2113,8 +2155,37 @@ window.handleAddResource = async function (e) {
       return;
     }
 
+    // Submit button ko loading state mein badlein aur percentage dikhayein
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const originalBtnHTML = submitBtn ? submitBtn.innerHTML : "";
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Uploading 0%`;
+    }
+
     try {
+      // 1. Save in local IndexedDB Vault
       await saveFileToVaultDB(newId, file);
+
+      // 2. Read file with Progress Percentage for Cloud Sync Base64
+      const cloudFileData = await new Promise((resolve, reject) => {
+        if (file.size > 10 * 1024 * 1024) {
+          // Agar file 10MB se badi hai toh base64 skip karein (local vault handle karega)
+          resolve("");
+          return;
+        }
+        const reader = new FileReader();
+        reader.onprogress = (event) => {
+          if (event.lengthComputable && submitBtn) {
+            const percent = Math.round((event.loaded / event.total) * 100);
+            submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Uploading ${percent}%`;
+          }
+        };
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = (err) => reject(err);
+        reader.readAsDataURL(file);
+      });
+
       appState.data.resources.unshift({
         id: newId,
         type,
@@ -2124,21 +2195,26 @@ window.handleAddResource = async function (e) {
         fileName: file.name,
         mimeType: file.type || "application/octet-stream",
         sizeBytes: file.size,
+        fileData: cloudFileData,
         createdAt: Date.now(),
       });
+
       showToast(
-        `${type.toUpperCase()} "${tag}" uploaded to ${category}!`,
+        `${type.toUpperCase()} "${tag}" uploaded successfully!`,
         "success",
       );
+      appState.activeResourceCategory = category;
+      await saveWorkspaceToCloud();
     } catch (err) {
       console.error(err);
-      showToast("Failed to store file in browser vault.", "error");
-      return;
+      showToast("Failed to process file for upload.", "error");
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalBtnHTML;
+      }
     }
   }
-
-  appState.activeResourceCategory = category;
-  await saveWorkspaceToCloud();
 };
 
 window.openResourceItem = async function (resId) {
@@ -2150,16 +2226,25 @@ window.openResourceItem = async function (resId) {
     return;
   }
 
-  const blob = await getFileFromVaultDB(item.id);
-  if (!blob) {
+  // First check Cloud-Synced Base64 Data (works on ALL devices: mobile, laptop, tablet)
+  let previewUrl = item.fileData || "";
+
+  // Fallback to local IndexedDB Vault if it's a huge video (>10MB)
+  if (!previewUrl) {
+    const blob = await getFileFromVaultDB(item.id);
+    if (blob) {
+      previewUrl = URL.createObjectURL(blob);
+    }
+  }
+
+  if (!previewUrl) {
     showToast(
-      "File data exists on the device where it was uploaded.",
+      "Large video (>10MB) is stored in local device vault, or re-upload to sync.",
       "warning",
     );
     return;
   }
 
-  const blobUrl = URL.createObjectURL(blob);
   const modal = document.getElementById("resourcePreviewModal");
   const body = document.getElementById("previewModalBody");
   document.getElementById("previewModalCategory").textContent =
@@ -2168,14 +2253,20 @@ window.openResourceItem = async function (resId) {
     `${item.tag} (${item.fileName})`;
 
   if (item.type === "image") {
-    body.innerHTML = `<img src="${blobUrl}" alt="${escapeHtml(item.tag)}" class="max-h-[65vh] rounded-xl object-contain" />`;
+    body.innerHTML = `
+      <div class="space-y-3 text-center">
+        <img src="${previewUrl}" alt="${escapeHtml(item.tag)}" class="max-h-[60vh] mx-auto rounded-xl object-contain" />
+        <a href="${previewUrl}" download="${escapeHtml(item.fileName || "image.png")}" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-neonPurple text-black font-bold text-xs">
+          <i class="fa-solid fa-download"></i> Download Image
+        </a>
+      </div>`;
   } else if (item.type === "video") {
-    body.innerHTML = `<video src="${blobUrl}" controls autoplay class="max-h-[65vh] w-full rounded-xl bg-black"></video>`;
+    body.innerHTML = `<video src="${previewUrl}" controls autoplay class="max-h-[65vh] w-full rounded-xl bg-black"></video>`;
   } else {
     body.innerHTML = `
-      <div class="w-full space-y-3 text-center py-6">
-        <iframe src="${blobUrl}" class="w-full h-[55vh] rounded-xl border border-darkBorder bg-white"></iframe>
-        <a href="${blobUrl}" download="${escapeHtml(item.fileName)}" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-neonPurple text-black font-bold text-xs">
+      <div class="w-full space-y-3 text-center py-4">
+        <iframe src="${previewUrl}" class="w-full h-[55vh] rounded-xl border border-darkBorder bg-white"></iframe>
+        <a href="${previewUrl}" download="${escapeHtml(item.fileName || "document.pdf")}" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-neonPurple text-black font-bold text-xs">
           <i class="fa-solid fa-download"></i> Download ${escapeHtml(item.fileName)}
         </a>
       </div>
@@ -2205,7 +2296,7 @@ window.deleteResourceItem = function (resId) {
       appState.data.resources = (appState.data.resources || []).filter(
         (r) => r.id !== resId,
       );
-      showToast("Resource deleted.", "info");
+      showToast("Resource deleted from Cloud.", "info");
       await saveWorkspaceToCloud();
     },
   );
@@ -2225,7 +2316,6 @@ function renderResourcesSection() {
   const allRes = appState.data.resources || [];
   const activeType = appState.activeResourceType || "link";
 
-  // Counts & Video Storage Calculation (Max 500 MB)
   const counts = {
     link: allRes.filter((r) => r.type === "link").length,
     image: allRes.filter((r) => r.type === "image").length,
@@ -2254,7 +2344,6 @@ function renderResourcesSection() {
     `${usedVideoMB} MB / 500 MB (${videoPct}%)`;
   document.getElementById("videoStorageBar").style.width = `${videoPct}%`;
 
-  // Highlight Active Resource Type Card
   ["link", "image", "video", "document"].forEach((t) => {
     const btn = document.getElementById("resTab-" + t);
     if (!btn) return;
@@ -2268,6 +2357,7 @@ function renderResourcesSection() {
   });
 
   const typeItems = allRes.filter((r) => r.type === activeType);
+  // Collect all unique categories created so far in this resource type
   const categories = [...new Set(typeItems.map((r) => r.category))];
   if (
     appState.activeResourceCategory !== "ALL" &&
@@ -2275,6 +2365,14 @@ function renderResourcesSection() {
   ) {
     appState.activeResourceCategory = "ALL";
   }
+
+  const defaultSelectedCat =
+    appState.activeResourceCategory !== "ALL"
+      ? appState.activeResourceCategory
+      : categories[0] || "__NEW__";
+
+  const showNewCatInputByDefault =
+    categories.length === 0 || defaultSelectedCat === "__NEW__";
 
   const filteredItems =
     appState.activeResourceCategory === "ALL"
@@ -2291,11 +2389,11 @@ function renderResourcesSection() {
   const typeLabels = {
     link: {
       title: "Link Resources",
-      hint: "Paste YouTube playlist, coding sheet, or article URL",
+      hint: "Select an existing category or create a new one, enter Tag, and paste Link",
       icon: "fa-link",
     },
     image: {
-      title: "Image Resources (Strictly Images • Max 2 MB)",
+      title: "Image Resources (Strictly Images • Max 2 MB • Cloud Synced)",
       hint: "Upload whiteboard photos, handwritten notes, diagrams",
       icon: "fa-image",
     },
@@ -2305,16 +2403,16 @@ function renderResourcesSection() {
       icon: "fa-film",
     },
     document: {
-      title: "Document Resources (Strictly PDF / DOC / PPT / TXT)",
+      title: "Document Resources (Strictly PDF / DOC / PPT • Cloud Synced)",
       hint: "Upload syllabus PDFs, assignments, or cheatsheets",
       icon: "fa-file-pdf",
     },
   }[activeType];
 
   workspace.innerHTML = `
-    <!-- Add Resource Form -->
+    <!-- Add Resource Form with Smart Category Dropdown -->
     <form onsubmit="handleAddResource(event)" class="bg-slate-50 dark:bg-neutral-900/80 p-5 rounded-2xl border border-slate-200 dark:border-darkBorder space-y-4">
-      <div class="flex items-center justify-between">
+      <div class="flex flex-wrap items-center justify-between gap-2">
         <h3 class="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
           <i class="fa-solid ${typeLabels.icon} text-neonPurple"></i>
           <span>Add to ${typeLabels.title}</span>
@@ -2323,19 +2421,39 @@ function renderResourcesSection() {
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
-        <div class="md:col-span-3">
-          <label class="block text-[11px] font-semibold text-slate-400 mb-1">1. Category / Folder (e.g., DSA)</label>
-          <input type="text" id="resCategoryInput" list="existingResCategories" required placeholder="e.g., DSA, Calculus, Web Dev" class="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-black border border-slate-200 dark:border-darkBorder text-sm focus:outline-none focus:border-neonPurple" />
-          <datalist id="existingResCategories">
-            ${categories.map((c) => `<option value="${escapeHtml(c)}"></option>`).join("")}
-          </datalist>
+        <!-- 1. Smart Category Selector Dropdown + New Category Input -->
+        <div class="md:col-span-3 space-y-2">
+          <label class="block text-[11px] font-semibold text-slate-400">1. Select or Create Category</label>
+          <select
+            id="resCategorySelect"
+            onchange="handleCategoryDropdownChange(this)"
+            class="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-black border border-slate-200 dark:border-darkBorder text-sm focus:outline-none focus:border-neonPurple"
+          >
+            ${categories
+              .map(
+                (c) =>
+                  `<option value="${escapeHtml(c)}" ${c === defaultSelectedCat ? "selected" : ""}>📂 ${escapeHtml(c)}</option>`,
+              )
+              .join("")}
+            <option value="__NEW__" ${showNewCatInputByDefault ? "selected" : ""}>➕ Create New Category...</option>
+          </select>
+
+          <input
+            type="text"
+            id="resCategoryCustomInput"
+            ${showNewCatInputByDefault ? "required" : ""}
+            placeholder="Type new category (e.g., AI, DSA)"
+            class="${showNewCatInputByDefault ? "" : "hidden"} w-full px-3.5 py-2 rounded-xl bg-white dark:bg-black border border-neonCyan/60 text-sm focus:outline-none focus:border-neonCyan"
+          />
         </div>
 
+        <!-- 2. Resource Tag / Name -->
         <div class="md:col-span-4">
           <label class="block text-[11px] font-semibold text-slate-400 mb-1">2. Resource Tag / Title (e.g., Love Babbar)</label>
           <input type="text" id="resTagInput" required placeholder="e.g., Love Babbar Supreme Playlist" class="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-black border border-slate-200 dark:border-darkBorder text-sm focus:outline-none focus:border-neonCyan" />
         </div>
 
+        <!-- 3. URL or File Input -->
         <div class="md:col-span-3">
           ${
             activeType === "link"
@@ -2350,16 +2468,17 @@ function renderResourcesSection() {
           }
         </div>
 
+        <!-- 4. Submit Button -->
         <div class="md:col-span-2 flex items-end">
           <button type="submit" class="w-full py-2.5 px-4 rounded-xl bg-neonPurple hover:opacity-90 text-black font-bold text-sm shadow-lg transition flex items-center justify-center gap-1.5">
-            <i class="fa-solid fa-plus"></i>
+            <i class="fa-solid fa-cloud-arrow-up"></i>
             <span>Save</span>
           </button>
         </div>
       </div>
     </form>
 
-    <!-- Category Folder Filter Pills (e.g., ALL, DSA, Calculus...) -->
+    <!-- Category Folder Filter Pills (ALL, AI, DSA, Calculus...) -->
     <div class="flex items-center gap-2 overflow-x-auto pb-2">
       <button onclick="selectResourceCategory('ALL')" class="px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
         appState.activeResourceCategory === "ALL"
@@ -2409,9 +2528,16 @@ function renderResourcesSection() {
                     <i class="fa-solid fa-folder-open text-[10px]"></i>
                     ${escapeHtml(item.category)}
                   </span>
-                  <button onclick="event.stopPropagation(); deleteResourceItem('${item.id}')" class="w-8 h-8 rounded-lg text-slate-400 hover:text-electricYellow hover:bg-electricYellow/10 flex items-center justify-center transition" title="Delete Resource">
-                    <i class="fa-solid fa-trash-can text-xs"></i>
-                  </button>
+                  <div class="flex items-center gap-1">
+                    ${
+                      item.type === "link" || item.fileData
+                        ? '<span class="text-[10px] px-2 py-0.5 rounded bg-neonPurple/15 text-neonPurple font-bold" title="Synced on Server"><i class="fa-solid fa-cloud"></i> Cloud</span>'
+                        : '<span class="text-[10px] px-2 py-0.5 rounded bg-electricYellow/15 text-electricYellow font-bold" title="Saved on this device">Local</span>'
+                    }
+                    <button onclick="event.stopPropagation(); deleteResourceItem('${item.id}')" class="w-8 h-8 rounded-lg text-slate-400 hover:text-electricYellow hover:bg-electricYellow/10 flex items-center justify-center transition" title="Delete Resource">
+                      <i class="fa-solid fa-trash-can text-xs"></i>
+                    </button>
+                  </div>
                 </div>
 
                 <!-- Tag / Title Highlight -->
@@ -2430,7 +2556,7 @@ function renderResourcesSection() {
                   ${
                     item.type === "link"
                       ? '<i class="fa-solid fa-arrow-up-right-from-square"></i> Visit Link directly'
-                      : '<i class="fa-solid fa-eye"></i> Click to Preview / Download'
+                      : '<i class="fa-solid fa-eye"></i> Preview / Download'
                   }
                 </span>
                 <span class="text-[10px] text-slate-500">${new Date(item.createdAt).toLocaleDateString()}</span>

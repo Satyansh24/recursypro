@@ -15,6 +15,4 @@ const TrackerDataSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now },
 });
 
-module.exports =
-  mongoose.models.TrackerData ||
-  mongoose.model("TrackerData", TrackerDataSchema);
+module.exports = mongoose.model("TrackerData", TrackerDataSchema);

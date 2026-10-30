@@ -4,14 +4,14 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-
 const User = require("./models/User");
 const TrackerData = require("./models/TrackerData");
 const authMiddleware = require("./middleware/auth");
 
 const app = express();
 
-app.use(express.json({ limit: "10mb" }));
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
 app.use(
   cors({
     origin: process.env.FRONTEND_URL || "*",
@@ -204,6 +204,8 @@ function getDefaultStarterData() {
         progress: 25,
       },
     ],
+    weeklyTasks: [],
+    resources: [],
   };
 }
 
@@ -241,6 +243,8 @@ app.post("/api/signup", async (req, res) => {
       todos: starter.todos,
       subjects: starter.subjects,
       weakAreas: starter.weakAreas,
+      weeklyTasks: starter.weeklyTasks,
+      resources: starter.resources,
     });
     await tracker.save();
 
@@ -300,10 +304,12 @@ app.get("/api/data", authMiddleware, async (req, res) => {
     if (!tracker) {
       const starter = getDefaultStarterData();
       tracker = new TrackerData({
-        userId: req.user.userId,
+        userId: user._id,
         todos: starter.todos,
         subjects: starter.subjects,
         weakAreas: starter.weakAreas,
+        weeklyTasks: starter.weeklyTasks,
+        resources: starter.resources,
       });
       await tracker.save();
     }
