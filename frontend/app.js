@@ -2099,6 +2099,54 @@ window.handleCategoryDropdownChange = function (selectEl) {
   }
 };
 
+// Cloudinary Direct Upload Helper Function with Live Percentage
+async function uploadFileToCloudinary(file, onProgress) {
+  const cloudName = "myel0q0h";
+  const uploadPreset = "satyansh";
+
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("upload_preset", uploadPreset);
+
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open(
+      "POST",
+      `https://api.cloudinary.com/v1_1/${cloudName}/upload`,
+      true,
+    );
+
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && onProgress) {
+        const percent = Math.round((e.loaded / e.total) * 100);
+        onProgress(percent);
+      }
+    };
+
+    xhr.onload = () => {
+      if (xhr.status === 200) {
+        const data = JSON.parse(xhr.responseText);
+        resolve(data.secure_url);
+      } else {
+        try {
+          const errData = JSON.parse(xhr.responseText);
+          reject(
+            new Error(errData.error?.message || "Cloudinary upload failed"),
+          );
+        } catch (e) {
+          reject(
+            new Error("Cloudinary upload failed with status " + xhr.status),
+          );
+        }
+      }
+    };
+
+    xhr.onerror = () =>
+      reject(new Error("Network error during Cloudinary upload"));
+    xhr.send(formData);
+  });
+}
+
 window.handleAddResource = async function (e) {
   e.preventDefault();
   if (!appState.token) {
@@ -2155,59 +2203,46 @@ window.handleAddResource = async function (e) {
       return;
     }
 
-    // Submit button ko loading state mein badlein aur percentage dikhayein
     const submitBtn = e.target.querySelector('button[type="submit"]');
     const originalBtnHTML = submitBtn ? submitBtn.innerHTML : "";
     if (submitBtn) {
       submitBtn.disabled = true;
-      submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Uploading 0%`;
+      submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Uploading to Cloud 0%`;
     }
 
     try {
-      // 1. Save in local IndexedDB Vault
-      await saveFileToVaultDB(newId, file);
-
-      // 2. Read file with Progress Percentage for Cloud Sync Base64
-      const cloudFileData = await new Promise((resolve, reject) => {
-        if (file.size > 10 * 1024 * 1024) {
-          // Agar file 10MB se badi hai toh base64 skip karein (local vault handle karega)
-          resolve("");
-          return;
+      // Direct Cloudinary Upload with Live Percentage Progress Bar
+      const publicCloudUrl = await uploadFileToCloudinary(file, (percent) => {
+        if (submitBtn) {
+          submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Uploading to Cloud ${percent}%`;
         }
-        const reader = new FileReader();
-        reader.onprogress = (event) => {
-          if (event.lengthComputable && submitBtn) {
-            const percent = Math.round((event.loaded / event.total) * 100);
-            submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Uploading ${percent}%`;
-          }
-        };
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = (err) => reject(err);
-        reader.readAsDataURL(file);
       });
+
+      // Also save in local IndexedDB vault as offline cache
+      await saveFileToVaultDB(newId, file);
 
       appState.data.resources.unshift({
         id: newId,
         type,
         category,
         tag,
-        url: "",
+        url: publicCloudUrl, // Cloudinary secure URL for multi-device access
         fileName: file.name,
         mimeType: file.type || "application/octet-stream",
         sizeBytes: file.size,
-        fileData: cloudFileData,
+        fileData: publicCloudUrl, // Synced across all devices
         createdAt: Date.now(),
       });
 
       showToast(
-        `${type.toUpperCase()} "${tag}" uploaded successfully!`,
+        `${type.toUpperCase()} "${tag}" uploaded to Cloud & Synced!`,
         "success",
       );
       appState.activeResourceCategory = category;
       await saveWorkspaceToCloud();
     } catch (err) {
       console.error(err);
-      showToast("Failed to process file for upload.", "error");
+      showToast(`Upload Failed: ${err.message}`, "error");
     } finally {
       if (submitBtn) {
         submitBtn.disabled = false;
@@ -2226,11 +2261,10 @@ window.openResourceItem = async function (resId) {
     return;
   }
 
-  // First check Cloud-Synced Base64 Data (works on ALL devices: mobile, laptop, tablet)
-  let previewUrl = item.fileData || "";
+  // Use Cloudinary URL (item.url or item.fileData), fallback to local IDB blob if needed
+  let previewUrl = item.url || item.fileData || "";
 
-  // Fallback to local IndexedDB Vault if it's a huge video (>10MB)
-  if (!previewUrl) {
+  if (!previewUrl || previewUrl.startsWith("blob:")) {
     const blob = await getFileFromVaultDB(item.id);
     if (blob) {
       previewUrl = URL.createObjectURL(blob);
