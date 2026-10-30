@@ -464,34 +464,56 @@ window.handleLogout = function () {
   showToast("Logged out safely.", "info");
 };
 
-// --- Fetch & Save Data with MongoDB Backend ---
+// --- Fetch & Save Data with Strict MongoDB Verification & Anti-Data-Loss Protection ---
+let syncTimeout = null;
+
 async function fetchUserDataFromBackend() {
   if (!appState.token) return;
-  if (appState.token === "demo_offline_token") {
-    const savedLocal = localStorage.getItem("recursy_offline_data");
-    appState.data = savedLocal
-      ? normalizeTrackerData(JSON.parse(savedLocal))
-      : createDefaultSampleData();
-    ensureValidSelectedSubject();
-    renderAll();
-    return;
-  }
+
+  const userKey = `recursy_backup_${appState.user?.userId || "default"}`;
+  const savedLocalRaw =
+    localStorage.getItem(userKey) ||
+    localStorage.getItem("recursy_offline_data");
+  const localParsed = savedLocalRaw ? JSON.parse(savedLocalRaw) : null;
 
   try {
     const res = await fetch(`${API_URL}/data`, {
       headers: { Authorization: `Bearer ${appState.token}` },
     });
     if (res.status === 401) return handleLogout();
+    if (!res.ok) throw new Error(`Server returned ${res.status}`);
+
     const rawData = await res.json();
-    appState.data = normalizeTrackerData(rawData);
+    // Backend kabhi { tracker: {...} } bhejta hai ya seedha object
+    const serverPayload = rawData.tracker || rawData;
+    const serverTime = serverPayload.updatedAt
+      ? new Date(serverPayload.updatedAt).getTime()
+      : 0;
+    const localTime = localParsed?.updatedAt || 0;
+
+    // PROTECTION: Agar local backup server se naya hai (matlab pichla cloud sync fail hua tha)
+    if (localParsed && localTime > serverTime + 2000) {
+      appState.data = normalizeTrackerData(localParsed);
+      ensureValidSelectedSubject();
+      renderAll();
+      showToast(
+        "Restored unsynced local changes & syncing to Cloud now...",
+        "info",
+      );
+      await saveWorkspaceToCloud(); // Turant cloud par push karo
+      return;
+    }
+
+    appState.data = normalizeTrackerData(serverPayload);
+    appState.data.updatedAt = serverTime || Date.now();
+    localStorage.setItem(userKey, JSON.stringify(appState.data));
     ensureValidSelectedSubject();
     renderAll();
   } catch (err) {
     console.error("Error loading from backend:", err);
-    showToast("Offline cache loaded (Backend unreachable)", "warning");
-    const savedLocal = localStorage.getItem("recursy_offline_data");
-    appState.data = savedLocal
-      ? normalizeTrackerData(JSON.parse(savedLocal))
+    showToast("Offline backup loaded (Cloud unreachable)", "warning");
+    appState.data = localParsed
+      ? normalizeTrackerData(localParsed)
       : createDefaultSampleData();
     ensureValidSelectedSubject();
     renderAll();
@@ -499,7 +521,12 @@ async function fetchUserDataFromBackend() {
 }
 
 async function saveWorkspaceToCloud() {
+  // Har change par exact timestamp lagao taaki purana data kabhi naye ko overwrite na kare
+  appState.data.updatedAt = Date.now();
   renderAll();
+
+  const userKey = `recursy_backup_${appState.user?.userId || "default"}`;
+  localStorage.setItem(userKey, JSON.stringify(appState.data));
   localStorage.setItem("recursy_offline_data", JSON.stringify(appState.data));
 
   if (!appState.token || appState.token === "demo_offline_token") return;
@@ -509,26 +536,52 @@ async function saveWorkspaceToCloud() {
     badge.innerHTML = `<i class="fa-solid fa-rotate fa-spin"></i> Syncing...`;
   }
 
-  try {
-    await fetch(`${API_URL}/data`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${appState.token}`,
-      },
-      body: JSON.stringify(appState.data),
-    });
-    if (badge) {
-      badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-neonPurple animate-pulse"></span> Cloud Synced`;
-    }
-  } catch (err) {
-    console.error("Error syncing to MongoDB:", err);
-    if (badge) {
-      badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-electricYellow"></span> Saved Locally`;
-    }
-  }
-}
+  // Debounce (300ms): Agar 5 units jaldi-jaldi banaye toh saari requests aapas me na takrayein
+  if (syncTimeout) clearTimeout(syncTimeout);
 
+  syncTimeout = setTimeout(async () => {
+    try {
+      const res = await fetch(`${API_URL}/data`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${appState.token}`,
+        },
+        body: JSON.stringify(appState.data),
+      });
+
+      if (res.status === 401) {
+        showToast("Session expired! Please log in again.", "error");
+        return handleLogout();
+      }
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || `HTTP Error ${res.status}`);
+      }
+
+      // Server se confirm hone ke baad local timestamp ko server ke timestamp se match karo
+      const result = await res.json();
+      if (result.tracker && result.tracker.updatedAt) {
+        appState.data.updatedAt = new Date(result.tracker.updatedAt).getTime();
+        localStorage.setItem(userKey, JSON.stringify(appState.data));
+      }
+
+      if (badge) {
+        badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-neonPurple animate-pulse"></span> Cloud Synced`;
+      }
+    } catch (err) {
+      console.error("Error syncing to MongoDB:", err);
+      showToast(
+        `Cloud Sync Failed: ${err.message}. Safe in Local Backup!`,
+        "warning",
+      );
+      if (badge) {
+        badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-electricYellow"></span> Unsynced (Local Safe)`;
+      }
+    }
+  }, 300);
+}
 function ensureValidSelectedSubject() {
   if (!appState.data.subjects || appState.data.subjects.length === 0) {
     appState.selectedSubjectId = null;
