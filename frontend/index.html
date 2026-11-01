@@ -102,6 +102,80 @@
       </div>
     </div>
 
+    <!-- Custom Universal Edit Modal -->
+    <div
+      id="editItemModal"
+      class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+    >
+      <div
+        class="bg-white dark:bg-darkCard border border-slate-200 dark:border-darkBorder rounded-2xl max-w-md w-full p-6 shadow-2xl transform transition-all"
+      >
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-2.5 text-neonCyan">
+            <i class="fa-solid fa-pen-to-square text-xl"></i>
+            <h3
+              id="editModalTitle"
+              class="text-lg font-bold text-slate-900 dark:text-white"
+            >
+              Edit Item
+            </h3>
+          </div>
+          <button
+            type="button"
+            onclick="closeEditModal()"
+            class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-neutral-800 text-slate-400 hover:text-white flex items-center justify-center"
+          >
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <form id="editModalForm" class="space-y-4">
+          <div>
+            <label
+              id="editModalLabel1"
+              class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5"
+              >Name / Text</label
+            >
+            <input
+              type="text"
+              id="editModalInput1"
+              required
+              class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-neutral-900 border border-slate-200 dark:border-darkBorder text-sm focus:outline-none focus:border-neonPurple"
+            />
+          </div>
+
+          <div id="editModalField2Wrapper" class="hidden">
+            <label
+              id="editModalLabel2"
+              class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5"
+              >Tag / Details</label
+            >
+            <input
+              type="text"
+              id="editModalInput2"
+              class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-neutral-900 border border-slate-200 dark:border-darkBorder text-sm focus:outline-none focus:border-neonCyan"
+            />
+          </div>
+
+          <div class="flex justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onclick="closeEditModal()"
+              class="px-4 py-2 rounded-xl text-sm font-medium bg-slate-100 dark:bg-neutral-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-neutral-700 transition"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="px-5 py-2 rounded-xl text-sm font-bold bg-neonPurple hover:opacity-90 text-black shadow-lg transition"
+            >
+              Save Changes
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <!-- ==================== AUTHENTICATION SCREEN ==================== -->
     <div
       id="authScreen"
@@ -286,6 +360,17 @@
               </div>
             </div>
 
+            <div id="forgotPasswordLinkWrap" class="flex justify-end -mt-1">
+              <button
+                type="button"
+                onclick="openForgotPasswordView()"
+                class="text-xs font-semibold text-neonCyan hover:underline flex items-center gap-1"
+              >
+                <i class="fa-solid fa-key text-[10px]"></i>
+                <span>Forgot your password?</span>
+              </button>
+            </div>
+
             <div
               id="authErrorMsg"
               class="hidden text-xs text-electricYellow bg-electricYellow/10 border border-electricYellow/20 p-3 rounded-xl"
@@ -300,6 +385,122 @@
               <i class="fa-solid fa-arrow-right"></i>
             </button>
           </form>
+          <!-- ==================== FORGOT PASSWORD 3-STEP FLOW ==================== -->
+          <div id="forgotPasswordContainer" class="hidden space-y-4">
+            <!-- Step 1: Enter Email -->
+            <form id="forgotStep1Form" onsubmit="handleSendResetOtp(event)" class="space-y-4">
+              <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5">
+                  Registered Email Address
+                </label>
+                <div class="relative">
+                  <i class="fa-solid fa-envelope absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
+                  <input
+                    type="email"
+                    id="resetEmailInput"
+                    required
+                    placeholder="Enter your registered email"
+                    class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 dark:bg-neutral-900 border border-slate-200 dark:border-darkBorder text-sm focus:outline-none focus:border-neonCyan"
+                  />
+                </div>
+              </div>
+              <button
+                type="submit"
+                id="sendOtpBtn"
+                class="w-full py-3 rounded-xl bg-neonCyan hover:opacity-90 text-black font-bold text-sm shadow-lg transition flex items-center justify-center gap-2"
+              >
+                <i class="fa-solid fa-paper-plane"></i>
+                <span>Send OTP to Email</span>
+              </button>
+            </form>
+
+            <!-- Step 2: Enter OTP -->
+            <form id="forgotStep2Form" onsubmit="handleVerifyResetOtp(event)" class="hidden space-y-4">
+              <div class="p-3 rounded-xl bg-neonCyan/10 border border-neonCyan/30 text-xs text-neonCyan" id="otpSentInfoBox">
+                6-digit OTP has been sent to your email.
+              </div>
+              <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5">
+                  Enter 6-Digit OTP
+                </label>
+                <div class="relative">
+                  <i class="fa-solid fa-key absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
+                  <input
+                    type="text"
+                    id="resetOtpInput"
+                    required
+                    maxlength="6"
+                    placeholder="e.g., 482910"
+                    class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 dark:bg-neutral-900 border border-slate-200 dark:border-darkBorder text-sm tracking-widest font-bold focus:outline-none focus:border-neonPurple"
+                  />
+                </div>
+              </div>
+              <button
+                type="submit"
+                id="verifyOtpBtn"
+                class="w-full py-3 rounded-xl bg-neonPurple hover:opacity-90 text-black font-bold text-sm shadow-lg transition flex items-center justify-center gap-2"
+              >
+                <i class="fa-solid fa-circle-check"></i>
+                <span>Verify OTP</span>
+              </button>
+            </form>
+
+            <!-- Step 3: Create New Password -->
+            <form id="forgotStep3Form" onsubmit="handleResetPasswordSubmit(event)" class="hidden space-y-4">
+              <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5">
+                  New Password
+                </label>
+                <div class="relative">
+                  <i class="fa-solid fa-lock absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
+                  <input
+                    type="password"
+                    id="resetNewPasswordInput"
+                    required
+                    placeholder="Enter new password"
+                    class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 dark:bg-neutral-900 border border-slate-200 dark:border-darkBorder text-sm focus:outline-none focus:border-neonPurple"
+                  />
+                </div>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5">
+                  Confirm New Password
+                </label>
+                <div class="relative">
+                  <i class="fa-solid fa-check-double absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
+                  <input
+                    type="password"
+                    id="resetConfirmPasswordInput"
+                    required
+                    placeholder="Confirm new password"
+                    class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 dark:bg-neutral-900 border border-slate-200 dark:border-darkBorder text-sm focus:outline-none focus:border-neonPurple"
+                  />
+                </div>
+              </div>
+              <button
+                type="submit"
+                id="createNewPassBtn"
+                class="w-full py-3 rounded-xl bg-neonPurple hover:opacity-90 text-black font-bold text-sm shadow-lg transition flex items-center justify-center gap-2"
+              >
+                <i class="fa-solid fa-key"></i>
+                <span>Create New Password</span>
+              </button>
+            </form>
+
+            <div
+              id="forgotErrorMsg"
+              class="hidden text-xs text-electricYellow bg-electricYellow/10 border border-electricYellow/20 p-3 rounded-xl"
+            ></div>
+
+            <button
+              type="button"
+              onclick="closeForgotPasswordView()"
+              class="w-full py-2 text-xs font-bold text-slate-400 hover:text-neonPurple transition flex items-center justify-center gap-1.5"
+            >
+              <i class="fa-solid fa-arrow-left"></i>
+              <span>Back to Login</span>
+            </button>
+          </div>
           <!-- inko delete krna hai yha se  -->
           <!-- <div class="my-5 flex items-center gap-3">
             <div class="h-px bg-slate-200 dark:bg-darkBorder flex-1"></div>

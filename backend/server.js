@@ -4,6 +4,13 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+let nodemailer = null;
+try {
+  nodemailer = require("nodemailer");
+} catch (e) {
+  console.warn("Nodemailer not installed yet. Run npm install in backend.");
+}
+
 const User = require("./models/User");
 const TrackerData = require("./models/TrackerData");
 const authMiddleware = require("./middleware/auth");
@@ -78,33 +85,10 @@ function getDefaultStarterData() {
             name: "Unit 1: Differential Calculus",
             topics: [
               {
-                id: "top_101",
-                name: "Limits, Continuity & Taylor Series",
-                revisions: 2,
-                completed: true,
-                isWeak: false,
-                questions: [
-                  {
-                    id: "q_1",
-                    text: "Q1: Leibnitz Theorem Proof & Maclaurin Series expansion of sin(x)",
-                    completed: true,
-                  },
-                  {
-                    id: "q_2",
-                    text: "Q2: Test continuity and differentiability of f(x) = |x|/x at x = 0",
-                    completed: true,
-                  },
-                  {
-                    id: "q_3",
-                    text: "Q3: Verify Rolle’s Theorem & Mean Value Theorem for polynomials",
-                    completed: true,
-                  },
-                ],
-              },
-              {
                 id: "top_102",
                 name: "Partial Derivatives & Euler’s Theorem",
                 revisions: 1,
+                stars: 3,
                 completed: false,
                 isWeak: true,
                 questions: [
@@ -125,6 +109,31 @@ function getDefaultStarterData() {
                   },
                 ],
               },
+              {
+                id: "top_101",
+                name: "Limits, Continuity & Taylor Series",
+                revisions: 2,
+                stars: 2,
+                completed: true,
+                isWeak: false,
+                questions: [
+                  {
+                    id: "q_1",
+                    text: "Q1: Leibnitz Theorem Proof & Maclaurin Series expansion of sin(x)",
+                    completed: true,
+                  },
+                  {
+                    id: "q_2",
+                    text: "Q2: Test continuity and differentiability of f(x) = |x|/x at x = 0",
+                    completed: true,
+                  },
+                  {
+                    id: "q_3",
+                    text: "Q3: Verify Rolle’s Theorem & Mean Value Theorem for polynomials",
+                    completed: true,
+                  },
+                ],
+              },
             ],
           },
           {
@@ -135,6 +144,7 @@ function getDefaultStarterData() {
                 id: "top_201",
                 name: "Double & Triple Integrals (Change of Order)",
                 revisions: 0,
+                stars: 3,
                 completed: false,
                 isWeak: true,
                 questions: [
@@ -167,6 +177,7 @@ function getDefaultStarterData() {
                 id: "top_301",
                 name: "Singly & Doubly Linked List Operations",
                 revisions: 3,
+                stars: 3,
                 completed: true,
                 isWeak: false,
                 questions: [
@@ -223,7 +234,7 @@ app.post("/api/signup", async (req, res) => {
         .json({ error: "All fields (Name, Email, Password) are required!" });
     }
 
-    let user = await User.findOne({ email: email.toLowerCase() });
+    let user = await User.findOne({ email: email.toLowerCase().trim() });
     if (user)
       return res
         .status(400)
@@ -297,6 +308,157 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
+// --- FORGOT PASSWORD & OTP ROUTES ---
+app.post("/api/forgot-password", async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res
+        .status(400)
+        .json({ error: "Please enter your registered email address!" });
+    }
+
+    const cleanEmail = email.toLowerCase().trim();
+    const user = await User.findOne({ email: cleanEmail });
+    if (!user) {
+      return res
+        .status(404)
+        .json({ error: "No account found with this email address!" });
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    user.resetOtp = otp;
+    user.resetOtpExpires = new Date(Date.now() + 10 * 60 * 1000); // Valid for 10 minutes
+    await user.save();
+
+    let mailSent = false;
+    if (nodemailer && process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+      try {
+        const transporter = nodemailer.createTransport({
+          service: "gmail",
+          auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS,
+          },
+        });
+
+        await transporter.sendMail({
+          from: `"Recursy Pro Security" <${process.env.EMAIL_USER}>`,
+          to: cleanEmail,
+          subject: "Your Recursy Pro Password Reset OTP",
+          html: `
+            <div style="font-family: Arial, sans-serif; background:#050505; color:#f8fafc; padding:24px; border-radius:16px; border:1px solid #00ff66;">
+              <h2 style="color:#00ff66; margin-top:0;">Recursy Pro — Password Reset</h2>
+              <p>Hello <strong>${user.name}</strong>,</p>
+              <p>Use the 6-digit OTP below to verify your request and create a new password:</p>
+              <div style="font-size:28px; font-weight:800; letter-spacing:6px; color:#050505; background:#00ff66; display:inline-block; padding:12px 24px; border-radius:12px; margin:16px 0;">
+                ${otp}
+              </div>
+              <p style="font-size:12px; color:#94a3b8;">This OTP is valid for 10 minutes. If you did not request this, please ignore this email.</p>
+            </div>
+          `,
+        });
+        mailSent = true;
+      } catch (mailErr) {
+        console.error("SMTP Email Error:", mailErr);
+      }
+    }
+
+    res.json({
+      success: true,
+      mailSent,
+      message: mailSent
+        ? `6-digit OTP sent to ${cleanEmail}!`
+        : `OTP generated! (Set EMAIL_USER & EMAIL_PASS in .env for live email delivery)`,
+      devOtp: mailSent ? undefined : otp,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/verify-otp", async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp) {
+      return res.status(400).json({ error: "Email and OTP are required!" });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    if (!user || !user.resetOtp || !user.resetOtpExpires) {
+      return res
+        .status(400)
+        .json({ error: "No active OTP request found. Please request a new OTP." });
+    }
+
+    if (new Date() > new Date(user.resetOtpExpires)) {
+      return res
+        .status(400)
+        .json({ error: "OTP has expired! Please request a new OTP." });
+    }
+
+    if (user.resetOtp !== otp.toString().trim()) {
+      return res
+        .status(400)
+        .json({ error: "Invalid OTP! Please check and try again." });
+    }
+
+    res.json({
+      success: true,
+      message: "OTP verified! You can now create your new password.",
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/reset-password", async (req, res) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+    if (!email || !otp || !newPassword) {
+      return res
+        .status(400)
+        .json({ error: "Email, OTP, and New Password are required!" });
+    }
+
+    if (newPassword.length < 4) {
+      return res
+        .status(400)
+        .json({ error: "Password must be at least 4 characters long!" });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    if (!user || !user.resetOtp || !user.resetOtpExpires) {
+      return res
+        .status(400)
+        .json({ error: "Invalid or expired password reset session!" });
+    }
+
+    if (new Date() > new Date(user.resetOtpExpires)) {
+      return res
+        .status(400)
+        .json({ error: "OTP has expired! Please request a new OTP." });
+    }
+
+    if (user.resetOtp !== otp.toString().trim()) {
+      return res.status(400).json({ error: "Invalid OTP!" });
+    }
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    user.resetOtp = null;
+    user.resetOtpExpires = null;
+    await user.save();
+
+    res.json({
+      success: true,
+      message:
+        "New password created successfully! Please login with your new password.",
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // --- PROTECTED DATA SYNC ROUTES ---
 app.get("/api/data", authMiddleware, async (req, res) => {
   try {
@@ -304,7 +466,7 @@ app.get("/api/data", authMiddleware, async (req, res) => {
     if (!tracker) {
       const starter = getDefaultStarterData();
       tracker = new TrackerData({
-        userId: user._id,
+        userId: req.user.userId,
         todos: starter.todos,
         subjects: starter.subjects,
         weakAreas: starter.weakAreas,

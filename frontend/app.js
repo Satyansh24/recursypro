@@ -232,20 +232,23 @@ function normalizeTrackerData(raw) {
         topics: (Array.isArray(u.topics || u.chapters)
           ? u.topics || u.chapters
           : []
-        ).map((t) => ({
-          id: t.id || "top_" + Date.now() + Math.random(),
-          name: t.name || "Untitled Topic",
-          revisions: Number(t.revisions) || 0,
-          completed: !!t.completed,
-          isWeak: !!t.isWeak,
-          questions: (Array.isArray(t.questions) ? t.questions : []).map(
-            (q) => ({
-              id: q.id || "q_" + Date.now() + Math.random(),
-              text: q.text || "Question",
-              completed: !!q.completed,
-            }),
-          ),
-        })),
+        )
+          .map((t) => ({
+            id: t.id || "top_" + Date.now() + Math.random(),
+            name: t.name || "Untitled Topic",
+            revisions: Number(t.revisions) || 0,
+            stars: Math.min(3, Math.max(0, Number(t.stars) || 0)),
+            completed: !!t.completed,
+            isWeak: !!t.isWeak,
+            questions: (Array.isArray(t.questions) ? t.questions : []).map(
+              (q) => ({
+                id: q.id || "q_" + Date.now() + Math.random(),
+                text: q.text || "Question",
+                completed: !!q.completed,
+              }),
+            ),
+          }))
+          .sort((a, b) => (Number(b.stars) || 0) - (Number(a.stars) || 0)),
       })),
     }),
   );
@@ -366,12 +369,19 @@ window.switchAuthTab = function (mode) {
   const errBox = document.getElementById("authErrorMsg");
   errBox.classList.add("hidden");
 
+  const forgotWrap = document.getElementById("forgotPasswordLinkWrap");
+  const forgotContainer = document.getElementById("forgotPasswordContainer");
+  const authForm = document.getElementById("authForm");
+  if (forgotContainer) forgotContainer.classList.add("hidden");
+  if (authForm) authForm.classList.remove("hidden");
+
   if (mode === "register") {
     regBtn.className =
       "py-2 text-sm font-bold rounded-lg bg-white dark:bg-darkCard text-neonPurple shadow-sm transition";
     loginBtn.className =
       "py-2 text-sm font-semibold rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition";
     nameWrap.classList.remove("hidden");
+    if (forgotWrap) forgotWrap.classList.add("hidden");
     heading.textContent = "Create Recursy Account";
     subheading.textContent =
       "Register with your name, email, and password to start tracking";
@@ -382,10 +392,175 @@ window.switchAuthTab = function (mode) {
     regBtn.className =
       "py-2 text-sm font-semibold rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition";
     nameWrap.classList.add("hidden");
+    if (forgotWrap) forgotWrap.classList.remove("hidden");
     heading.textContent = "Sign In to Recursy";
     subheading.textContent =
       "Enter your email and password to access your study dashboard";
     submitText.textContent = "Login to Dashboard";
+  }
+};
+
+// --- Forgot Password & OTP Flow Handlers ---
+window.openForgotPasswordView = function () {
+  const authForm = document.getElementById("authForm");
+  const modeTabs = document.getElementById("tabLoginBtn")?.parentElement;
+  const forgotContainer = document.getElementById("forgotPasswordContainer");
+  if (authForm) authForm.classList.add("hidden");
+  if (modeTabs) modeTabs.classList.add("hidden");
+  if (forgotContainer) forgotContainer.classList.remove("hidden");
+
+  document.getElementById("forgotStep1Form")?.classList.remove("hidden");
+  document.getElementById("forgotStep2Form")?.classList.add("hidden");
+  document.getElementById("forgotStep3Form")?.classList.add("hidden");
+  document.getElementById("forgotErrorMsg")?.classList.add("hidden");
+
+  const currentEmail = document.getElementById("authEmail")?.value || "";
+  if (currentEmail && document.getElementById("resetEmailInput")) {
+    document.getElementById("resetEmailInput").value = currentEmail;
+  }
+
+  document.getElementById("authHeading").textContent = "Reset Your Password";
+  document.getElementById("authSubheading").textContent =
+    "Enter your registered email to receive a 6-digit verification OTP";
+};
+
+window.closeForgotPasswordView = function () {
+  const authForm = document.getElementById("authForm");
+  const modeTabs = document.getElementById("tabLoginBtn")?.parentElement;
+  const forgotContainer = document.getElementById("forgotPasswordContainer");
+  if (forgotContainer) forgotContainer.classList.add("hidden");
+  if (authForm) authForm.classList.remove("hidden");
+  if (modeTabs) modeTabs.classList.remove("hidden");
+  switchAuthTab("login");
+};
+
+window.handleSendResetOtp = async function (e) {
+  e.preventDefault();
+  const email = document
+    .getElementById("resetEmailInput")
+    .value.trim()
+    .toLowerCase();
+  const errBox = document.getElementById("forgotErrorMsg");
+  const btn = document.getElementById("sendOtpBtn");
+  errBox.classList.add("hidden");
+
+  if (!email) return;
+  const origHTML = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Sending OTP...`;
+
+  try {
+    const res = await fetch(`${API_URL}/forgot-password`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Failed to send OTP");
+
+    document.getElementById("forgotStep1Form").classList.add("hidden");
+    document.getElementById("forgotStep2Form").classList.remove("hidden");
+
+    const infoBox = document.getElementById("otpSentInfoBox");
+    if (data.devOtp) {
+      infoBox.innerHTML = `OTP generated for <strong>${escapeHtml(email)}</strong>.<br/><span class="text-electricYellow font-bold">Testing/Dev Mode OTP: ${data.devOtp}</span>`;
+      document.getElementById("resetOtpInput").value = data.devOtp;
+    } else {
+      infoBox.innerHTML = `6-digit OTP sent to <strong>${escapeHtml(email)}</strong>. Please check your inbox/spam.`;
+    }
+    showToast("OTP sent successfully!", "info");
+  } catch (err) {
+    errBox.textContent = err.message;
+    errBox.classList.remove("hidden");
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = origHTML;
+  }
+};
+
+window.handleVerifyResetOtp = async function (e) {
+  e.preventDefault();
+  const email = document
+    .getElementById("resetEmailInput")
+    .value.trim()
+    .toLowerCase();
+  const otp = document.getElementById("resetOtpInput").value.trim();
+  const errBox = document.getElementById("forgotErrorMsg");
+  const btn = document.getElementById("verifyOtpBtn");
+  errBox.classList.add("hidden");
+
+  const origHTML = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Verifying...`;
+
+  try {
+    const res = await fetch(`${API_URL}/verify-otp`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, otp }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Invalid OTP");
+
+    document.getElementById("forgotStep2Form").classList.add("hidden");
+    document.getElementById("forgotStep3Form").classList.remove("hidden");
+    document.getElementById("authHeading").textContent = "Create New Password";
+    document.getElementById("authSubheading").textContent =
+      "OTP verified! Enter and confirm your new password below";
+    showToast("OTP Verified! Enter your new password.", "success");
+  } catch (err) {
+    errBox.textContent = err.message;
+    errBox.classList.remove("hidden");
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = origHTML;
+  }
+};
+
+window.handleResetPasswordSubmit = async function (e) {
+  e.preventDefault();
+  const email = document
+    .getElementById("resetEmailInput")
+    .value.trim()
+    .toLowerCase();
+  const otp = document.getElementById("resetOtpInput").value.trim();
+  const newPassword = document.getElementById("resetNewPasswordInput").value;
+  const confirmPassword = document.getElementById(
+    "resetConfirmPasswordInput",
+  ).value;
+  const errBox = document.getElementById("forgotErrorMsg");
+  const btn = document.getElementById("createNewPassBtn");
+  errBox.classList.add("hidden");
+
+  if (newPassword !== confirmPassword) {
+    errBox.textContent = "Passwords do not match! Please re-check.";
+    errBox.classList.remove("hidden");
+    return;
+  }
+
+  const origHTML = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Updating Password...`;
+
+  try {
+    const res = await fetch(`${API_URL}/reset-password`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, otp, newPassword }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Password reset failed");
+
+    showToast("New password created! Please login now.", "success");
+    document.getElementById("authEmail").value = email;
+    document.getElementById("authPassword").value = "";
+    closeForgotPasswordView();
+  } catch (err) {
+    errBox.textContent = err.message;
+    errBox.classList.remove("hidden");
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = origHTML;
   }
 };
 
@@ -926,11 +1101,182 @@ window.deleteUnit = function (subjectId, unitId) {
   );
 };
 
+// --- Universal Edit Modal Helper & Item Edit Handlers ---
+function openEditModal({ title, label1, value1, label2, value2, onSave }) {
+  const modal = document.getElementById("editItemModal");
+  if (!modal) return;
+  document.getElementById("editModalTitle").textContent = title || "Edit Item";
+  document.getElementById("editModalLabel1").textContent =
+    label1 || "Name / Text";
+  const input1 = document.getElementById("editModalInput1");
+  input1.value = value1 || "";
+
+  const wrap2 = document.getElementById("editModalField2Wrapper");
+  const input2 = document.getElementById("editModalInput2");
+  if (label2) {
+    wrap2.classList.remove("hidden");
+    document.getElementById("editModalLabel2").textContent = label2;
+    input2.value = value2 || "";
+  } else {
+    wrap2.classList.add("hidden");
+    input2.value = "";
+  }
+
+  modal.classList.remove("hidden");
+  modal.classList.add("flex");
+  input1.focus();
+
+  const form = document.getElementById("editModalForm");
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+    const v1 = input1.value.trim();
+    const v2 = input2.value.trim();
+    if (!v1) return;
+    closeEditModal();
+    await onSave(v1, v2);
+  };
+}
+
+window.closeEditModal = function () {
+  const modal = document.getElementById("editItemModal");
+  if (!modal) return;
+  modal.classList.add("hidden");
+  modal.classList.remove("flex");
+};
+
+window.editTodoItem = function (todoId) {
+  const item = appState.data.todos.find((t) => t.id === todoId);
+  if (!item) return;
+  openEditModal({
+    title: "Edit Daily To-Do Task",
+    label1: "Task Description",
+    value1: item.text,
+    label2: "Task Tag (e.g., Study Session, Revision, Practice, Exam Prep)",
+    value2: item.tag || "Study Session",
+    onSave: async (newText, newTag) => {
+      item.text = newText;
+      if (newTag) item.tag = newTag;
+      showToast("Daily task updated!", "success");
+      await saveWorkspaceToCloud();
+    },
+  });
+};
+
+window.editSubjectName = function (subjectId) {
+  const subj = appState.data.subjects.find((s) => s.id === subjectId);
+  if (!subj) return;
+  const oldName = subj.name;
+  openEditModal({
+    title: "Edit Subject Name",
+    label1: "Subject Name",
+    value1: subj.name,
+    onSave: async (newName) => {
+      subj.name = newName;
+      (appState.data.weakAreas || []).forEach((w) => {
+        if (w.subjectName === oldName) w.subjectName = newName;
+      });
+      showToast(`Subject renamed to "${newName}"!`, "success");
+      await saveWorkspaceToCloud();
+    },
+  });
+};
+
+window.editUnitName = function (subjectId, unitId) {
+  const subj = appState.data.subjects.find((s) => s.id === subjectId);
+  const unit = subj?.units.find((u) => u.id === unitId);
+  if (!unit) return;
+  openEditModal({
+    title: "Edit Unit Name",
+    label1: "Unit Title",
+    value1: unit.name,
+    onSave: async (newName) => {
+      unit.name = newName;
+      showToast(`Unit updated to "${newName}"!`, "success");
+      await saveWorkspaceToCloud();
+    },
+  });
+};
+
+window.editTopicName = function (subjectId, unitId, topicId) {
+  const subj = appState.data.subjects.find((s) => s.id === subjectId);
+  const unit = subj?.units.find((u) => u.id === unitId);
+  const topic = unit?.topics.find((t) => t.id === topicId);
+  if (!topic) return;
+  const oldName = topic.name;
+  openEditModal({
+    title: "Edit Chapter / Topic",
+    label1: "Chapter / Topic Name",
+    value1: topic.name,
+    onSave: async (newName) => {
+      topic.name = newName;
+      (appState.data.weakAreas || []).forEach((w) => {
+        if (w.topicName === oldName && w.subjectName === subj.name) {
+          w.topicName = newName;
+        }
+      });
+      showToast("Topic name updated!", "success");
+      await saveWorkspaceToCloud();
+    },
+  });
+};
+
+window.editQuestionText = function (subjectId, unitId, topicId, questionId) {
+  const subj = appState.data.subjects.find((s) => s.id === subjectId);
+  const unit = subj?.units.find((u) => u.id === unitId);
+  const topic = unit?.topics.find((t) => t.id === topicId);
+  const q = topic?.questions.find((item) => item.id === questionId);
+  if (!q) return;
+  openEditModal({
+    title: "Edit Practice Question",
+    label1: "Question Details",
+    value1: q.text,
+    onSave: async (newText) => {
+      q.text = newText;
+      showToast("Practice question updated!", "success");
+      await saveWorkspaceToCloud();
+    },
+  });
+};
+
+// --- Topic Star Rating (1-3★) & Auto Priority Sorting ---
+function sortUnitTopicsByStars(unit) {
+  if (!unit || !Array.isArray(unit.topics)) return;
+  unit.topics.sort((a, b) => (Number(b.stars) || 0) - (Number(a.stars) || 0));
+}
+
+window.setTopicStars = async function (subjectId, unitId, topicId, starValue) {
+  const subj = appState.data.subjects.find((s) => s.id === subjectId);
+  const unit = subj?.units.find((u) => u.id === unitId);
+  const topic = unit?.topics.find((t) => t.id === topicId);
+  if (!topic) return;
+
+  const currentStars = Number(topic.stars) || 0;
+  topic.stars = currentStars === starValue ? 0 : starValue;
+
+  // Automatically rank topics inside this unit: 3★ on top -> 2★ -> 1★ -> 0★
+  sortUnitTopicsByStars(unit);
+
+  if (topic.stars > 0) {
+    showToast(
+      `Ranked "${topic.name}" with ${"⭐".repeat(topic.stars)} (${topic.stars} Star Priority)!`,
+      "info",
+    );
+  } else {
+    showToast(`Star priority cleared for "${topic.name}".`, "info");
+  }
+  await saveWorkspaceToCloud();
+};
+
 window.handleAddTopic = async function (e, subjectId, unitId) {
   e.preventDefault();
   const input = document.getElementById("newTopicNameInput");
+  const starSelect = document.getElementById("newTopicStarsSelect");
   const name = input.value.trim();
   if (!name) return;
+
+  const initialStars = starSelect
+    ? Math.min(3, Math.max(0, Number(starSelect.value) || 0))
+    : 0;
 
   const subj = appState.data.subjects.find((s) => s.id === subjectId);
   if (!subj) return;
@@ -941,11 +1287,14 @@ window.handleAddTopic = async function (e, subjectId, unitId) {
     id: "top_" + Date.now(),
     name,
     revisions: 0,
+    stars: initialStars,
     completed: false,
     isWeak: false,
     questions: [],
   });
+  sortUnitTopicsByStars(unit);
   input.value = "";
+  if (starSelect) starSelect.value = "0";
   showToast(`Chapter/Topic "${name}" added!`, "success");
   await saveWorkspaceToCloud();
 };
@@ -1334,6 +1683,9 @@ function renderTodoSection() {
                 }">
                     ${todo.completed ? "✓ Completed" : escapeHtml(todo.tag || "Daily")}
                 </span>
+                <button onclick="editTodoItem('${todo.id}')" class="w-9 h-9 rounded-xl bg-slate-200 dark:bg-neutral-800 hover:bg-neonCyan text-slate-500 dark:text-slate-300 hover:text-black transition flex items-center justify-center" title="Edit Task">
+                    <i class="fa-solid fa-pen-to-square text-xs"></i>
+                </button>
                 <button onclick="deleteTodoItem('${todo.id}')" class="w-9 h-9 rounded-xl bg-neutral-800 hover:bg-electricYellow text-slate-400 hover:text-black transition flex items-center justify-center" title="Delete Task">
                     <i class="fa-solid fa-trash-can text-xs"></i>
                 </button>
@@ -1375,9 +1727,14 @@ function renderSubjectsSection() {
                         <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-neonPurple/20 text-neonPurple">Subject ${idx + 1}</span>
                         <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white mt-1.5">${escapeHtml(subj.name)}</h3>
                     </div>
-                    <button onclick="event.stopPropagation(); deleteSubject('${subj.id}')" class="w-8 h-8 rounded-lg text-slate-400 hover:text-electricYellow hover:bg-electricYellow/10 flex items-center justify-center transition" title="Delete Subject">
-                        <i class="fa-solid fa-trash-can text-xs"></i>
-                    </button>
+                    <div class="flex items-center gap-1">
+                        <button onclick="event.stopPropagation(); editSubjectName('${subj.id}')" class="w-8 h-8 rounded-lg text-slate-400 hover:text-neonCyan hover:bg-neonCyan/10 flex items-center justify-center transition" title="Edit Subject Name">
+                            <i class="fa-solid fa-pen-to-square text-xs"></i>
+                        </button>
+                        <button onclick="event.stopPropagation(); deleteSubject('${subj.id}')" class="w-8 h-8 rounded-lg text-slate-400 hover:text-electricYellow hover:bg-electricYellow/10 flex items-center justify-center transition" title="Delete Subject">
+                            <i class="fa-solid fa-trash-can text-xs"></i>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="grid grid-cols-3 gap-2 my-4 text-center">
@@ -1427,7 +1784,12 @@ function renderSubjectsSection() {
                     <span class="px-2.5 py-1 rounded-lg bg-neonPurple text-black text-xs font-bold">ACTIVE SUBJECT WINDOW</span>
                     <span class="text-xs text-slate-500 dark:text-slate-400">Overall: <strong class="text-neonCyan">${subjStats.pct}% Completed</strong> • 🔄 ${subjStats.totalRevisions} Total Revisions</span>
                 </div>
-                <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white mt-2">${escapeHtml(activeSubj.name)}</h2>
+                <div class="flex items-center gap-2.5 mt-2">
+                    <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white">${escapeHtml(activeSubj.name)}</h2>
+                    <button onclick="editSubjectName('${activeSubj.id}')" class="w-8 h-8 rounded-xl bg-slate-100 dark:bg-neutral-900 text-slate-400 hover:text-neonCyan border border-slate-200 dark:border-darkBorder flex items-center justify-center transition" title="Rename Subject">
+                        <i class="fa-solid fa-pen text-xs"></i>
+                    </button>
+                </div>
             </div>
 
             <!-- Add Unit Form -->
@@ -1456,6 +1818,9 @@ function renderSubjectsSection() {
                             <i class="fa-solid fa-folder-open"></i>
                             <span>${escapeHtml(u.name)}</span>
                             <span class="px-1.5 py-0.5 rounded text-[10px] ${isUnitActive ? "bg-black/20 text-black" : "bg-slate-200 dark:bg-neutral-800 text-neonCyan"}">${uStats.pct}%</span>
+                        </button>
+                        <button onclick="event.stopPropagation(); editUnitName('${activeSubj.id}', '${u.id}')" class="px-1.5 py-2.5 text-xs opacity-75 hover:opacity-100" title="Rename Unit">
+                            <i class="fa-solid fa-pen text-[10px]"></i>
                         </button>
                         <button onclick="deleteUnit('${activeSubj.id}', '${u.id}')" class="pr-3 pl-1 py-2.5 text-xs opacity-70 hover:opacity-100" title="Delete Unit">
                             <i class="fa-solid fa-xmark"></i>
@@ -1486,8 +1851,14 @@ function renderSubjectsSection() {
                         </h3>
                         <p class="text-xs text-slate-500 dark:text-slate-400">Add chapters/topics below, list practice questions inside each topic, and increment revisions (+1)</p>
                     </div>
-                    <form onsubmit="handleAddTopic(event, '${activeSubj.id}', '${activeUnit.id}')" class="flex gap-2 min-w-[280px] sm:min-w-[360px]">
+                    <form onsubmit="handleAddTopic(event, '${activeSubj.id}', '${activeUnit.id}')" class="flex flex-wrap sm:flex-nowrap gap-2 min-w-[280px] sm:min-w-[440px]">
                         <input type="text" id="newTopicNameInput" required placeholder="Add new chapter or topic..." class="flex-1 px-3.5 py-2 rounded-xl bg-white dark:bg-black border border-slate-200 dark:border-darkBorder text-sm focus:outline-none focus:border-neonPurple">
+                        <select id="newTopicStarsSelect" class="px-2.5 py-2 rounded-xl bg-white dark:bg-black border border-slate-200 dark:border-darkBorder text-xs font-bold text-electricYellow focus:outline-none focus:border-electricYellow" title="Set Topic Star Priority">
+                            <option value="0">☆ Normal (0★)</option>
+                            <option value="3">⭐⭐⭐ High Priority (3★)</option>
+                            <option value="2">⭐⭐ Medium Priority (2★)</option>
+                            <option value="1">⭐ Important (1★)</option>
+                        </select>
                         <button type="submit" class="px-4 py-2 rounded-xl bg-neonPurple hover:opacity-90 text-black font-bold text-xs sm:text-sm transition whitespace-nowrap">
                             + Add Topic
                         </button>
@@ -1502,16 +1873,28 @@ function renderSubjectsSection() {
                             No chapters/topics added to this unit yet. Add your first topic above!
                         </div>
                     `
-                        : (activeUnit.topics || [])
+                        : [...(activeUnit.topics || [])]
+                            .sort((a, b) => (Number(b.stars) || 0) - (Number(a.stars) || 0))
                             .map((topic, tIdx) => {
                               const tStats = calculateTopicStats(topic);
                               const isCollapsed =
                                 !!appState.collapsedTopics[topic.id];
+                              const topicStars = Math.min(3, Math.max(0, Number(topic.stars) || 0));
+                              const priorityBadge =
+                                topicStars === 3
+                                  ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-electricYellow text-black shadow-sm">🔥 3★ High Priority</span>'
+                                  : topicStars === 2
+                                    ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-electricYellow/20 text-electricYellow border border-electricYellow/40">⚡ 2★ Priority</span>'
+                                    : topicStars === 1
+                                      ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-neonCyan/15 text-neonCyan">⭐ 1★ Important</span>'
+                                      : "";
                               return `
                             <div class="rounded-2xl border transition p-5 ${
                               tStats.isDone
                                 ? "bg-neonPurple/5 border-neonPurple/30"
-                                : "bg-slate-50/70 dark:bg-neutral-900/60 border-slate-200 dark:border-darkBorder"
+                                : topicStars === 3
+                                  ? "bg-slate-50/90 dark:bg-neutral-900/90 border-electricYellow/50"
+                                  : "bg-slate-50/70 dark:bg-neutral-900/60 border-slate-200 dark:border-darkBorder"
                             }">
                                 <!-- Topic Header Row -->
                                 <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-200/80 dark:border-darkBorder">
@@ -1525,10 +1908,14 @@ function renderSubjectsSection() {
                                         </button>
                                         <div>
                                             <div class="flex flex-wrap items-center gap-2">
-                                                <span class="text-xs font-bold text-neonPurple">Topic ${tIdx + 1}</span>
+                                                <span class="text-xs font-bold text-neonPurple">#${tIdx + 1}</span>
                                                 <h4 class="text-base sm:text-lg font-bold ${tStats.isDone ? "strikethrough-animated text-slate-400" : "text-slate-900 dark:text-white"}">
                                                     ${escapeHtml(topic.name)}
                                                 </h4>
+                                                <button onclick="editTopicName('${activeSubj.id}', '${activeUnit.id}', '${topic.id}')" class="w-6 h-6 rounded-lg bg-slate-200/70 dark:bg-neutral-800 text-slate-500 dark:text-slate-300 hover:bg-neonCyan hover:text-black flex items-center justify-center transition" title="Edit Topic Name">
+                                                    <i class="fa-solid fa-pen text-[10px]"></i>
+                                                </button>
+                                                ${priorityBadge}
                                                 <span class="px-2 py-0.5 rounded-full text-[11px] font-bold ${
                                                   tStats.pct === 100
                                                     ? "bg-neonPurple/20 text-neonPurple"
@@ -1547,8 +1934,25 @@ function renderSubjectsSection() {
                                         </div>
                                     </div>
 
-                                    <!-- Topic Controls: Revision Counter (+1), Weak Area Toggle, Delete -->
+                                    <!-- Topic Controls: 3-Star Priority Ranker, Revision Counter (+1), Weak Area Toggle, Delete -->
                                     <div class="flex flex-wrap items-center gap-2.5">
+                                        <!-- 3-Star Priority Selector (Auto Ranks 3★ -> 2★ -> 1★ -> 0★) -->
+                                        <div class="flex items-center gap-1 bg-white dark:bg-black px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-darkBorder shadow-sm" title="Set Importance Priority (3★ ranks highest)">
+                                            ${[1, 2, 3]
+                                              .map(
+                                                (starNum) => `
+                                                <button type="button" onclick="setTopicStars('${activeSubj.id}', '${activeUnit.id}', '${topic.id}', ${starNum})" class="text-sm transition transform hover:scale-125 ${
+                                                  topicStars >= starNum
+                                                    ? "text-electricYellow"
+                                                    : "text-slate-300 dark:text-neutral-700 hover:text-electricYellow/60"
+                                                }" title="${starNum} Star Priority">
+                                                    <i class="fa-solid fa-star"></i>
+                                                </button>
+                                            `,
+                                              )
+                                              .join("")}
+                                        </div>
+
                                         <!-- Revision Counter Box -->
                                         <div class="flex items-center gap-1.5 bg-white dark:bg-black px-3 py-1.5 rounded-xl border border-slate-200 dark:border-darkBorder shadow-sm">
                                             <i class="fa-solid fa-rotate text-electricYellow text-xs"></i>
@@ -1611,6 +2015,9 @@ function renderSubjectsSection() {
                                             </div>
                                             <div class="flex items-center gap-2">
                                                 ${q.completed ? '<span class="text-[10px] font-bold text-neonPurple">✓ Solved</span>' : ""}
+                                                <button onclick="editQuestionText('${activeSubj.id}', '${activeUnit.id}', '${topic.id}', '${q.id}')" class="text-slate-400 hover:text-neonCyan p-1 transition" title="Edit Question">
+                                                    <i class="fa-solid fa-pen-to-square text-xs"></i>
+                                                </button>
                                                 <button onclick="deleteQuestion('${activeSubj.id}', '${activeUnit.id}', '${topic.id}', '${q.id}')" class="text-slate-400 hover:text-electricYellow p-1 transition" title="Delete Question">
                                                     <i class="fa-solid fa-xmark text-xs"></i>
                                                 </button>
