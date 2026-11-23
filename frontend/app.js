@@ -278,6 +278,7 @@ function normalizeTrackerData(raw) {
       category: (r.category || "General").trim(),
       tag: (r.tag || "Untitled Resource").trim(),
       url: r.url || "",
+      fileData: r.fileData || r.url || "",
       fileName: r.fileName || "",
       mimeType: r.mimeType || "",
       sizeBytes: Number(r.sizeBytes) || 0,
@@ -340,13 +341,20 @@ function askConfirmation(title, message, onConfirm) {
 
 // --- Auto-Restore Session on Load ---
 window.addEventListener("DOMContentLoaded", async () => {
+  // Remove legacy shared offline key to prevent any cross-account data leak
+  localStorage.removeItem("recursy_offline_data");
+
   const savedToken = localStorage.getItem("recursy_token");
   const savedUser = localStorage.getItem("recursy_user");
   if (savedToken && savedUser) {
-    appState.token = savedToken;
-    appState.user = JSON.parse(savedUser);
-    openDashboardUI(appState.user.name);
-    await fetchUserDataFromBackend();
+    try {
+      appState.token = savedToken;
+      appState.user = JSON.parse(savedUser);
+      openDashboardUI(appState.user.name);
+      await fetchUserDataFromBackend();
+    } catch (e) {
+      handleLogout();
+    }
   }
 });
 
@@ -594,6 +602,10 @@ window.handleAuthSubmit = async function (e) {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Authentication failed");
 
+    // Clear any previous user's in-memory state & pending syncs before switching account
+    resetWorkspaceState();
+    localStorage.removeItem("recursy_offline_data");
+
     appState.token = data.token;
     appState.user = data.user;
 
@@ -612,6 +624,7 @@ window.handleAuthSubmit = async function (e) {
 };
 
 window.quickInstantDemo = function () {
+  resetWorkspaceState();
   const demoUser = {
     userId: "demo_local",
     name: "Satyansh Kumar Singh",
@@ -619,7 +632,7 @@ window.quickInstantDemo = function () {
   };
   appState.token = "demo_offline_token";
   appState.user = demoUser;
-  const savedLocal = localStorage.getItem("recursy_offline_data");
+  const savedLocal = localStorage.getItem("recursy_demo_offline_data");
   appState.data = savedLocal
     ? normalizeTrackerData(JSON.parse(savedLocal))
     : createDefaultSampleData();
@@ -629,100 +642,226 @@ window.quickInstantDemo = function () {
   showToast("Instant Demo Workspace Loaded!", "info");
 };
 
+// --- Strict In-Memory & Pending Sync Reset Helper (Prevents Cross-User Leaks) ---
+let syncTimeout = null;
+
+function resetWorkspaceState() {
+  if (syncTimeout) {
+    clearTimeout(syncTimeout);
+    syncTimeout = null;
+  }
+  appState.selectedSubjectId = null;
+  appState.selectedUnitId = null;
+  appState.collapsedTopics = {};
+  appState.activeResourceCategory = "ALL";
+  appState.activeSection = "dashboard";
+  appState.todoFilter = "all";
+  appState.weeklyFilter = "all";
+  appState.data = {
+    todos: [],
+    subjects: [],
+    weakAreas: [],
+    resources: [],
+    weeklyTasks: [],
+    ownerUserId: null,
+    updatedAt: 0,
+  };
+}
+
 window.handleLogout = function () {
+  resetWorkspaceState();
   appState.token = null;
   appState.user = null;
   localStorage.removeItem("recursy_token");
   localStorage.removeItem("recursy_user");
+  localStorage.removeItem("recursy_offline_data");
   document.getElementById("appContainer").classList.add("hidden");
   document.getElementById("authScreen").classList.remove("hidden");
+  // Clear auth password input so next user logs in cleanly
+  const passInput = document.getElementById("authPassword");
+  if (passInput) passInput.value = "";
   showToast("Logged out safely.", "info");
 };
 
-// --- Fetch & Save Data with Strict MongoDB Verification & Anti-Data-Loss Protection ---
-let syncTimeout = null;
-
+// --- Fetch & Save Data with Strict Per-User Confidentiality & MongoDB Isolation ---
 async function fetchUserDataFromBackend() {
-  if (!appState.token) return;
+  if (!appState.token || !appState.user?.userId) return;
 
-  const userKey = `recursy_backup_${appState.user?.userId || "default"}`;
-  const savedLocalRaw =
-    localStorage.getItem(userKey) ||
-    localStorage.getItem("recursy_offline_data");
-  const localParsed = savedLocalRaw ? JSON.parse(savedLocalRaw) : null;
+  const currentUserId = String(appState.user.userId);
+  const currentToken = appState.token;
+
+  // Strictly scoped local backup key for THIS user only (never shared across accounts)
+  const userKey = `recursy_backup_v2_${currentUserId}`;
+  localStorage.removeItem("recursy_offline_data");
+
+  let localParsed = null;
+  try {
+    const savedLocalRaw = localStorage.getItem(userKey);
+    if (savedLocalRaw) {
+      const parsed = JSON.parse(savedLocalRaw);
+      // Accept local backup ONLY if its ownerUserId strictly matches this logged-in user
+      if (parsed && String(parsed.ownerUserId) === currentUserId) {
+        localParsed = parsed;
+      }
+    }
+  } catch (e) {
+    localParsed = null;
+  }
 
   try {
     const res = await fetch(`${API_URL}/data`, {
-      headers: { Authorization: `Bearer ${appState.token}` },
+      cache: "no-store",
+      headers: {
+        Authorization: `Bearer ${currentToken}`,
+        "Cache-Control": "no-cache",
+      },
     });
     if (res.status === 401) return handleLogout();
     if (!res.ok) throw new Error(`Server returned ${res.status}`);
 
+    // Abort if user logged out or switched accounts while request was in flight
+    if (
+      appState.token !== currentToken ||
+      String(appState.user?.userId) !== currentUserId
+    ) {
+      return;
+    }
+
     const rawData = await res.json();
-    // Backend kabhi { tracker: {...} } bhejta hai ya seedha object
     const serverPayload = rawData.tracker || rawData;
+
+    // Extra security check: ensure returned document belongs strictly to current user
+    const serverOwner = serverPayload.ownerUserId || serverPayload.userId;
+    if (serverOwner && String(serverOwner) !== currentUserId) {
+      console.error("Account mismatch from server response!");
+      return handleLogout();
+    }
+
     const serverTime = serverPayload.updatedAt
       ? new Date(serverPayload.updatedAt).getTime()
       : 0;
     const localTime = localParsed?.updatedAt || 0;
 
-    // PROTECTION: Agar local backup server se naya hai (matlab pichla cloud sync fail hua tha)
-    if (localParsed && localTime > serverTime + 2000) {
+    // PROTECTION: Only restore local backup if THIS EXACT USER had unsynced changes from an offline failure
+    if (
+      localParsed &&
+      localParsed.hasUnsyncedChanges === true &&
+      String(localParsed.ownerUserId) === currentUserId &&
+      localTime > serverTime + 2000
+    ) {
       appState.data = normalizeTrackerData(localParsed);
+      appState.data.ownerUserId = currentUserId;
+      appState.data.updatedAt = localTime;
       ensureValidSelectedSubject();
       renderAll();
       showToast(
         "Restored unsynced local changes & syncing to Cloud now...",
         "info",
       );
-      await saveWorkspaceToCloud(); // Turant cloud par push karo
+      await saveWorkspaceToCloud();
       return;
     }
 
+    // Default: MongoDB Atlas is the single source of truth for this user's private workspace
     appState.data = normalizeTrackerData(serverPayload);
+    appState.data.ownerUserId = currentUserId;
     appState.data.updatedAt = serverTime || Date.now();
-    localStorage.setItem(userKey, JSON.stringify(appState.data));
+    localStorage.setItem(
+      userKey,
+      JSON.stringify({
+        ...appState.data,
+        ownerUserId: currentUserId,
+        hasUnsyncedChanges: false,
+      }),
+    );
     ensureValidSelectedSubject();
     renderAll();
   } catch (err) {
     console.error("Error loading from backend:", err);
+    if (
+      appState.token !== currentToken ||
+      String(appState.user?.userId) !== currentUserId
+    ) {
+      return;
+    }
     showToast("Offline backup loaded (Cloud unreachable)", "warning");
     appState.data = localParsed
       ? normalizeTrackerData(localParsed)
-      : createDefaultSampleData();
+      : {
+          todos: [],
+          subjects: [],
+          weakAreas: [],
+          resources: [],
+          weeklyTasks: [],
+        };
+    appState.data.ownerUserId = currentUserId;
     ensureValidSelectedSubject();
     renderAll();
   }
 }
 
 async function saveWorkspaceToCloud() {
-  // Har change par exact timestamp lagao taaki purana data kabhi naye ko overwrite na kare
+  if (!appState.user?.userId) return;
+
+  const syncUserId = String(appState.user.userId);
+  const syncToken = appState.token;
+
+  appState.data.ownerUserId = syncUserId;
   appState.data.updatedAt = Date.now();
   renderAll();
 
-  const userKey = `recursy_backup_${appState.user?.userId || "default"}`;
-  localStorage.setItem(userKey, JSON.stringify(appState.data));
-  localStorage.setItem("recursy_offline_data", JSON.stringify(appState.data));
+  if (syncToken === "demo_offline_token") {
+    localStorage.setItem(
+      "recursy_demo_offline_data",
+      JSON.stringify(appState.data),
+    );
+    return;
+  }
 
-  if (!appState.token || appState.token === "demo_offline_token") return;
+  // Save strictly inside THIS user's private localStorage slot (never a shared global key)
+  const userKey = `recursy_backup_v2_${syncUserId}`;
+  localStorage.setItem(
+    userKey,
+    JSON.stringify({
+      ...appState.data,
+      ownerUserId: syncUserId,
+      hasUnsyncedChanges: true,
+    }),
+  );
+
+  if (!syncToken) return;
 
   const badge = document.getElementById("cloudSyncBadge");
   if (badge) {
     badge.innerHTML = `<i class="fa-solid fa-rotate fa-spin"></i> Syncing...`;
   }
 
-  // Debounce (300ms): Agar 5 units jaldi-jaldi banaye toh saari requests aapas me na takrayein
+  // Debounce (300ms): Prevent rapid clicks from racing
   if (syncTimeout) clearTimeout(syncTimeout);
 
+  const payloadSnapshot = JSON.stringify({
+    ...appState.data,
+    ownerUserId: syncUserId,
+  });
+
   syncTimeout = setTimeout(async () => {
+    // Guard: Abort if user logged out or switched accounts before debounce fired
+    if (
+      !syncToken ||
+      appState.token !== syncToken ||
+      String(appState.user?.userId) !== syncUserId
+    ) {
+      return;
+    }
+
     try {
       const res = await fetch(`${API_URL}/data`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${appState.token}`,
+          Authorization: `Bearer ${syncToken}`,
         },
-        body: JSON.stringify(appState.data),
+        body: payloadSnapshot,
       });
 
       if (res.status === 401) {
@@ -735,12 +874,27 @@ async function saveWorkspaceToCloud() {
         throw new Error(errData.error || `HTTP Error ${res.status}`);
       }
 
-      // Server se confirm hone ke baad local timestamp ko server ke timestamp se match karo
+      // Confirm user hasn't switched accounts while request was in flight
+      if (
+        appState.token !== syncToken ||
+        String(appState.user?.userId) !== syncUserId
+      ) {
+        return;
+      }
+
       const result = await res.json();
       if (result.tracker && result.tracker.updatedAt) {
         appState.data.updatedAt = new Date(result.tracker.updatedAt).getTime();
-        localStorage.setItem(userKey, JSON.stringify(appState.data));
       }
+
+      localStorage.setItem(
+        userKey,
+        JSON.stringify({
+          ...appState.data,
+          ownerUserId: syncUserId,
+          hasUnsyncedChanges: false,
+        }),
+      );
 
       if (badge) {
         badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-neonPurple animate-pulse"></span> Cloud Synced`;

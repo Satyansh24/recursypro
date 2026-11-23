@@ -459,14 +459,16 @@ app.post("/api/reset-password", async (req, res) => {
   }
 });
 
-// --- PROTECTED DATA SYNC ROUTES ---
+// --- PROTECTED DATA SYNC ROUTES (STRICT PER-USER ISOLATION) ---
 app.get("/api/data", authMiddleware, async (req, res) => {
   try {
-    let tracker = await TrackerData.findOne({ userId: req.user.userId });
+    res.set("Cache-Control", "no-store, no-cache, must-revalidate, private");
+    const authUserId = String(req.user.userId);
+    let tracker = await TrackerData.findOne({ userId: authUserId });
     if (!tracker) {
       const starter = getDefaultStarterData();
       tracker = new TrackerData({
-        userId: req.user.userId,
+        userId: authUserId,
         todos: starter.todos,
         subjects: starter.subjects,
         weakAreas: starter.weakAreas,
@@ -475,7 +477,10 @@ app.get("/api/data", authMiddleware, async (req, res) => {
       });
       await tracker.save();
     }
-    res.json(tracker);
+    res.json({
+      ...tracker.toObject(),
+      ownerUserId: authUserId,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -483,9 +488,20 @@ app.get("/api/data", authMiddleware, async (req, res) => {
 
 app.post("/api/data", authMiddleware, async (req, res) => {
   try {
-    const { todos, subjects, weakAreas, weeklyTasks, resources } = req.body;
+    res.set("Cache-Control", "no-store, no-cache, must-revalidate, private");
+    const authUserId = String(req.user.userId);
+    const { todos, subjects, weakAreas, weeklyTasks, resources, ownerUserId } =
+      req.body;
+
+    // Security guardrail: Never allow one account's cached payload to overwrite another account
+    if (ownerUserId && String(ownerUserId) !== authUserId) {
+      return res.status(403).json({
+        error: "Access denied: Account mismatch detected. Please refresh and log in again.",
+      });
+    }
+
     const tracker = await TrackerData.findOneAndUpdate(
-      { userId: req.user.userId },
+      { userId: authUserId },
       {
         todos,
         subjects,
@@ -496,7 +512,13 @@ app.post("/api/data", authMiddleware, async (req, res) => {
       },
       { new: true, upsert: true },
     );
-    res.json({ success: true, tracker });
+    res.json({
+      success: true,
+      tracker: {
+        ...tracker.toObject(),
+        ownerUserId: authUserId,
+      },
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

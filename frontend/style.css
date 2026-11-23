@@ -41,18 +41,6 @@ body {
   background: #00ff66;
 }
 
-/* Soft Blur & Dimmed Style on Completed Items (No Strikethrough Line) */
-.strikethrough-animated {
-  text-decoration: none !important;
-  opacity: 0.62 !important;
-  filter: blur(0.45px);
-  transition: opacity 0.2s ease, filter 0.2s ease, color 0.2s ease;
-}
-.strikethrough-animated:hover {
-  opacity: 0.95 !important;
-  filter: blur(0px);
-}
-
 /* Aesthetic Neon Glows */
 .neon-glow-purple {
   box-shadow: 0 0 22px -4px rgba(0, 255, 102, 0.35);
@@ -78,30 +66,29 @@ body {
   color: #00ff66 !important;
   font-weight: 800 !important;
 }
-/* Soft Blur & Readable Completed Text (No Strikethrough Line) */
+/* High-Readability Crisp White Completed Text (No Strikethrough Line, No Heavy Blur) */
 .strikethrough-animated {
   text-decoration: none !important;
-  opacity: 0.62 !important;
-  filter: blur(0.45px);
-  color: #94a3b8 !important;
-  transition: opacity 0.2s ease, filter 0.2s ease, color 0.2s ease;
+  filter: none !important;
+  color: #f1f5f9 !important;
+  opacity: 0.92 !important;
+  transition: opacity 0.2s ease, color 0.2s ease;
 }
 .strikethrough-animated:hover {
-  opacity: 0.95 !important;
-  filter: blur(0px);
-  color: #e2e8f0 !important;
+  color: #ffffff !important;
+  opacity: 1 !important;
 }
 
-/* Light mode ke liye readable soft-slate text */
+/* Light mode ke liye crisp readable dark text */
 html:not(.dark) .strikethrough-animated {
-  color: #64748b !important;
-  opacity: 0.65 !important;
-  filter: blur(0.45px);
+  text-decoration: none !important;
+  filter: none !important;
+  color: #1e293b !important;
+  opacity: 0.90 !important;
 }
 html:not(.dark) .strikethrough-animated:hover {
-  color: #1e293b !important;
-  opacity: 0.95 !important;
-  filter: blur(0px);
+  color: #0f172a !important;
+  opacity: 1 !important;
 }
 
 /* ============================================================================
