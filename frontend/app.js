@@ -709,11 +709,10 @@ async function fetchUserDataFromBackend() {
   }
 
   try {
-    const res = await fetch(`${API_URL}/data`, {
+    const res = await fetch(`${API_URL}/data?_t=${Date.now()}`, {
       cache: "no-store",
       headers: {
         Authorization: `Bearer ${currentToken}`,
-        "Cache-Control": "no-cache",
       },
     });
     if (res.status === 401) return handleLogout();
