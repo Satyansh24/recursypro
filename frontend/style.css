@@ -41,12 +41,16 @@ body {
   background: #00ff66;
 }
 
-/* Animated Neon Green Strikethrough on Completed Items */
+/* Soft Blur & Dimmed Style on Completed Items (No Strikethrough Line) */
 .strikethrough-animated {
-  text-decoration: line-through;
-  text-decoration-thickness: 2px;
-  text-decoration-color: #00ff66;
-  opacity: 0.55;
+  text-decoration: none !important;
+  opacity: 0.62 !important;
+  filter: blur(0.45px);
+  transition: opacity 0.2s ease, filter 0.2s ease, color 0.2s ease;
+}
+.strikethrough-animated:hover {
+  opacity: 0.95 !important;
+  filter: blur(0px);
 }
 
 /* Aesthetic Neon Glows */
@@ -74,19 +78,30 @@ body {
   color: #00ff66 !important;
   font-weight: 800 !important;
 }
-/* Clear & Readable Completed Text with Neon Green Strikethrough */
+/* Soft Blur & Readable Completed Text (No Strikethrough Line) */
 .strikethrough-animated {
-  text-decoration: line-through;
-  text-decoration-thickness: 2px;
-  text-decoration-color: #00ff66;
-  opacity: 0.92 !important;
-  color: #cbd5e1 !important;
+  text-decoration: none !important;
+  opacity: 0.62 !important;
+  filter: blur(0.45px);
+  color: #94a3b8 !important;
+  transition: opacity 0.2s ease, filter 0.2s ease, color 0.2s ease;
+}
+.strikethrough-animated:hover {
+  opacity: 0.95 !important;
+  filter: blur(0px);
+  color: #e2e8f0 !important;
 }
 
-/* Light mode ke liye readable dark-slate text */
+/* Light mode ke liye readable soft-slate text */
 html:not(.dark) .strikethrough-animated {
-  color: #334155 !important;
-  opacity: 0.9 !important;
+  color: #64748b !important;
+  opacity: 0.65 !important;
+  filter: blur(0.45px);
+}
+html:not(.dark) .strikethrough-animated:hover {
+  color: #1e293b !important;
+  opacity: 0.95 !important;
+  filter: blur(0px);
 }
 
 /* ============================================================================
